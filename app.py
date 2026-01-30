@@ -115,24 +115,25 @@ with st.sidebar:
         results = collect_all_news(start_date, end_date)
         st.session_state.news_results = [r for r in results if r['연관도점수'] >= min_score]
 
-# 메인 레이아웃
+# 메인화면 레이아웃 (이 부분을 통째로 교체해 보세요)
 col1, col2 = st.columns([1.2, 0.8])
 
 with col1:
     st.subheader("📌 수집된 뉴스 리스트")
     if st.session_state.news_results:
+        selected_items = []
         for idx, item in enumerate(st.session_state.news_results):
-            # 이미 장바구니에 있는지 확인
-            is_in_cart = not st.session_state.cart.empty and item['링크'] in st.session_state.cart['링크'].values
-            
-            label = f"[{item['출처']}] {item['제목']} ({item['기사일자']})"
-            if st.checkbox(label, key=f"chk_{idx}", value=is_in_cart):
-                if not is_in_cart:
-                    new_row = pd.DataFrame([item])
-                    st.session_state.cart = pd.concat([st.session_state.cart, new_row], ignore_index=True)
-            else:
-                if is_in_cart:
-                    st.session_state.cart = st.session_state.cart[st.session_state.cart['링크'] != item['링크']]
+            # 체크박스 상태를 세션에서 관리
+            cb_key = f"news_{idx}"
+            is_selected = st.checkbox(
+                f"[{item['출처']}] {item['제목']} ({item['기사일자']})", 
+                key=cb_key,
+                value=st.session_state.get(cb_key, False)
+            )
+            if is_selected:
+                selected_items.append(item)
+        
+        st.session_state.cart = pd.DataFrame(selected_items)
     else:
         st.write("사이드바의 버튼을 눌러 뉴스를 불러오세요.")
 
@@ -153,7 +154,14 @@ with col2:
             use_container_width=True
         )
         
-        if st.button("장바구니 비우기"):
+        # 추가된 전체 해제 버튼
+        if st.button("🔄 선택 전체 해제", use_container_width=True):
+            for idx in range(len(st.session_state.news_results)):
+                st.session_state[f"news_{idx}"] = False
+            st.session_state.cart = pd.DataFrame()
+            st.rerun()
+
+        if st.button("🗑️ 장바구니 비우기", use_container_width=True):
             st.session_state.cart = pd.DataFrame()
             st.rerun()
     else:
