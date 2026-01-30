@@ -297,7 +297,7 @@ with col_cart:
             file_name = f"진주햄_뉴스클리핑_{end_d.strftime('%Y%m%d')}.xlsx"
             
             st.download_button(
-                label="📥 재미는 없지만 필요한 파일 다운로드",
+                label="📥 엑셀 파일 다운로드",
                 data=to_excel(st.session_state.cart_list),
                 file_name=file_name,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
