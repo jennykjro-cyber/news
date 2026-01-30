@@ -244,25 +244,26 @@ with col_main:
             
             if filtered_res:
                 st.success(f"총 {len(filtered_res)}건 발견. 실제로 쓸 건 몇 개 안 될겁니다🎉")
-                for idx, item in enumerate(filtered_res):
-                    # [오류 해결 핵심] Key에 current_cat(현재 탭 이름)을 포함시켜 중복 방지
-                    # 예: cb_전체_http://... vs cb_유통_http://... 
-                    unique_key = f"cb_{current_cat}_{idx}_{item['링크']}"
+                with st. container(height=550):
+                    for idx, item in enumerate(filtered_res):
+                        # [오류 해결 핵심] Key에 current_cat(현재 탭 이름)을 포함시켜 중복 방지
+                        # 예: cb_전체_http://... vs cb_유통_http://... 
+                        unique_key = f"cb_{current_cat}_{idx}_{item['링크']}"
                     
-                    with st.container(border=True):
-                        c_check, c_txt = st.columns([0.05, 0.95])
-                        with c_check:
-                            st.checkbox(
-                                "", 
-                                key=unique_key,
-                                value=(item['링크'] in cart_links), # 값은 실제 바구니 데이터 기준
-                                on_change=toggle_cart_item,
-                                args=(item, unique_key)
-                            )
-                        with c_txt:
-                            st.markdown(f"**[{item['키워드']}] {item['제목']}**")
-                            st.caption(f"🗞 {item['출처']}  |  🗓 {item['기사일자']}  |  ⭐ {item['연관도점수']}점")
-                            st.markdown(f"[🔗 기사 원문 보러가기]({item['링크']})")
+                        with st.container(border=True):
+                            c_check, c_txt = st.columns([0.05, 0.95])
+                            with c_check:
+                                st.checkbox(
+                                    "", 
+                                    key=unique_key,
+                                    value=(item['링크'] in cart_links), # 값은 실제 바구니 데이터 기준
+                                    on_change=toggle_cart_item,
+                                    args=(item, unique_key)
+                                )
+                            with c_txt:
+                                st.markdown(f"**[{item['키워드']}] {item['제목']}**")
+                                st.caption(f"🗞 {item['출처']}  |  🗓 {item['기사일자']}  |  ⭐ {item['연관도점수']}점")
+                                st.markdown(f"[🔗 기사 원문 보러가기]({item['링크']})")
             else:
                 if st.session_state.news_results:
                     st.info(f"💦 '{current_cat}' 쪽은 딱히 쓸만한 뉴스는 없습니다")
