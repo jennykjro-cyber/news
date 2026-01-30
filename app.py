@@ -107,18 +107,21 @@ def to_excel(data_list):
     df = pd.DataFrame(data_list)
     output = BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        export_df = df[["키워드", "출처", "기사일자", "제목"]]
-        export_df.to_excel(writer, index=False, sheet_name="뉴스클리핑")
-        
-        workbook = writer.book
-        worksheet = writer.sheets["뉴스클리핑"]
-        link_format = workbook.add_format({'font_color': 'blue', 'underline': 1})
-        
-        for row_num, link in enumerate(df['링크']):
-            worksheet.write_url(row_num + 1, 3, link, link_format, df.iloc[row_num]['제목'])
+        if not df.empty:
+            export_df = df[["키워드", "출처", "기사일자", "제목"]]
+            export_df.to_excel(writer, index=False, sheet_name="뉴스클리핑")
             
-        worksheet.set_column('A:C', 15)
-        worksheet.set_column('D:D', 80)
+            workbook = writer.book
+            worksheet = writer.sheets["뉴스클리핑"]
+            link_format = workbook.add_format({'font_color': 'blue', 'underline': 1})
+            
+            for row_num, link in enumerate(df['링크']):
+                worksheet.write_url(row_num + 1, 3, link, link_format, df.iloc[row_num]['제목'])
+            
+            worksheet.set_column('A:C', 15)
+            worksheet.set_column('D:D', 80)
+        else:
+             pd.DataFrame().to_excel(writer, sheet_name="뉴스클리핑")
     return output.getvalue()
 
 # =================================================
@@ -128,7 +131,6 @@ st.set_page_config(page_title="진주햄 뉴스 클리핑", page_icon="🥓", la
 
 # [핵심 수정] key를 사용하여 체크박스 상태를 제어하는 함수
 def toggle_cart_item(item, key):
-    # 현재 체크박스의 상태(True/False)를 가져옴
     is_checked = st.session_state[key]
     current_links = [c['링크'] for c in st.session_state.cart_list]
     
@@ -136,22 +138,27 @@ def toggle_cart_item(item, key):
         if item['링크'] not in current_links:
             st.session_state.cart_list.append(item)
     else:
-        # 링크가 일치하는 항목을 제거 (리스트 재구성)
         st.session_state.cart_list = [c for c in st.session_state.cart_list if c['링크'] != item['링크']]
 
-def add_group():
-    new_g = st.session_state.new_group_input.strip()
-    if new_g and new_g not in st.session_state.keyword_mapping:
-        st.session_state.keyword_mapping[new_g] = []
-        save_keywords(st.session_state.keyword_mapping)
-    st.session_state.new_group_input = ""
+# [추가] 키워드 관리를 위한 Helper 함수
+def dict_to_df(mapping):
+    rows = []
+    for category, keywords in mapping.items():
+        for kw in keywords:
+            rows.append({"대분류": category, "키워드": kw})
+    return pd.DataFrame(rows)
 
-def add_sub(group_name):
-    new_s = st.session_state.new_sub_input.strip()
-    if new_s and new_s not in st.session_state.keyword_mapping[group_name]:
-        st.session_state.keyword_mapping[group_name].append(new_s)
-        save_keywords(st.session_state.keyword_mapping)
-    st.session_state.new_sub_input = ""
+def df_to_dict(df):
+    new_mapping = {}
+    if not df.empty:
+        for index, row in df.iterrows():
+            cat = row["대분류"]
+            kw = row["키워드"]
+            if pd.notna(cat) and pd.notna(kw) and str(cat).strip() and str(kw).strip():
+                if cat not in new_mapping:
+                    new_mapping[cat] = []
+                new_mapping[cat].append(kw)
+    return new_mapping
 
 # 사이드바 설정
 with st.sidebar:
@@ -161,13 +168,11 @@ with st.sidebar:
     st.subheader("⚙️ 검색 설정")
     start_d, end_d = get_fixed_date_range()
     
-    # 날짜 표시를 좀 더 예쁘게
     st.info(f"📅 **어차피 이번 주 얘기만 합니다**\n\n{start_d.strftime('%m.%d')} (금) ~ {end_d.strftime('%m.%d')} (오늘)")
     
     min_score = st.slider("🎯 **연관도 필터** (높을수록 정확)", 0, 5, 2)
     
-    st.write("") # 여백
-    # [요청사항 반영] 위트 있는 문구와 이모티콘 추가
+    st.write("") 
     if st.button("🗂 이번 주 어쩔 수 없는 뉴스 수집", type="primary", use_container_width=True):
         with st.spinner('🕵️‍♀️ 불가피하게 뉴스를 수집 중입니다'):
             st.session_state.news_results = collect_news_final(st.session_state.keyword_mapping, start_d, end_d)
@@ -177,34 +182,39 @@ with st.sidebar:
     st.divider()
     
     st.subheader("📝 키워드 관리실")
+    st.caption("키워드를 수정하거나 Del키로 삭제하세요.")
     
-    # 2단 컬럼 배치 (가로형)
-    col1, col2 = st.columns(2)
-    with col1:
-        st.text_input("대분류", key="new_group_input", on_change=add_group, placeholder="분류명")
-    with col2:
-        keys = list(st.session_state.keyword_mapping.keys())
-        sel_g = st.selectbox("선택", options=keys, label_visibility="visible") if keys else st.selectbox("없음", ["-"])
-
-    if keys:
-        st.text_input(f"➕ '{sel_g}'에 키워드 쏙 넣기", key="new_sub_input", on_change=add_sub, args=(sel_g,), placeholder="입력 후 엔터!")
-
-    # 스크롤 박스 (높이 고정)
-    with st.expander("📋 등록된 키워드 리스트 (펼치기)", expanded=True):
-        with st.container(height=350, border=False):
-            if not st.session_state.keyword_mapping:
-                st.caption("등록된 키워드가 없습니다.")
-            for g, subs in list(st.session_state.keyword_mapping.items()):
-                c_del, c_title = st.columns([0.15, 0.85])
-                if c_del.button("🗑️", key=f"del_{g}"):
-                    del st.session_state.keyword_mapping[g]
-                    save_keywords(st.session_state.keyword_mapping)
-                    st.rerun()
-                c_title.markdown(f"**{g}**")
-                # 태그 느낌으로 표시
-                tags = [f"`{s}`" for s in subs]
-                c_title.markdown(" ".join(tags))
-                st.markdown("---")
+    # [수정] 데이터 에디터로 키워드 관리 (드래그앤드롭/삭제 기능 구현)
+    current_df = dict_to_df(st.session_state.keyword_mapping)
+    
+    edited_df = st.data_editor(
+        current_df,
+        num_rows="dynamic",
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "대분류": st.column_config.SelectboxColumn(
+                "대분류",
+                help="키워드의 그룹을 변경할 수 있습니다.",
+                width="small",
+                options=list(st.session_state.keyword_mapping.keys()) + ["신규그룹"],
+                required=True
+            ),
+            "키워드": st.column_config.TextColumn(
+                "키워드",
+                width="medium",
+                required=True
+            )
+        },
+        key="keyword_editor"
+    )
+    
+    # 변경사항 저장 로직
+    if not current_df.equals(edited_df):
+        new_mapping = df_to_dict(edited_df)
+        st.session_state.keyword_mapping = new_mapping
+        save_keywords(new_mapping)
+        st.rerun()
 
 # 메인 영역
 st.title("📰 Weekly News Clipping")
@@ -217,9 +227,8 @@ with col_main:
     st.subheader("🔍 검색 결과")
     
     all_categories = ["전체"] + list(st.session_state.keyword_mapping.keys())
-    tabs = st.tabs([f"  {cat}  " for cat in all_categories]) # 탭 간격 조금 벌리기
+    tabs = st.tabs([f"  {cat}  " for cat in all_categories]) 
     
-    # 바구니에 담긴 링크 목록 (체크박스 동기화용)
     cart_links = [item['링크'] for item in st.session_state.cart_list]
     
     for i, tab in enumerate(tabs):
@@ -229,41 +238,41 @@ with col_main:
             if current_cat != "전체":
                 filtered_res = [r for r in filtered_res if r['키워드'] == current_cat]
             
-            if filtered_res:
-                st.success(f"총 {len(filtered_res)}건 발견. 실제로 쓸 건 몇 개 안 될겁니다🎉")
-                for idx, item in enumerate(filtered_res):
-                    # [오류 해결 핵심] Key에 current_cat(현재 탭 이름)을 포함시켜 중복 방지
-                    # 예: cb_전체_http://... vs cb_유통_http://... 
-                    unique_key = f"cb_{current_cat}_{idx}_{item['링크']}"
-                    
-                    with st.container(border=True):
-                        c_check, c_txt = st.columns([0.05, 0.95])
-                        with c_check:
-                            st.checkbox(
-                                "", 
-                                key=unique_key,
-                                value=(item['링크'] in cart_links), # 값은 실제 바구니 데이터 기준
-                                on_change=toggle_cart_item,
-                                args=(item, unique_key)
-                            )
-                        with c_txt:
-                            st.markdown(f"**[{item['키워드']}] {item['제목']}**")
-                            st.caption(f"🗞 {item['출처']}  |  🗓 {item['기사일자']}  |  ⭐ {item['연관도점수']}점")
-                            st.markdown(f"[🔗 기사 원문 보러가기]({item['링크']})")
-            else:
-                if st.session_state.news_results:
-                    st.info(f"💦 '{current_cat}' 쪽은 딱히 쓸만한 뉴스는 없습니다")
+            # [수정] 스크롤 영역 고정 (높이 600px)
+            with st.container(height=600, border=False):
+                if filtered_res:
+                    st.success(f"총 {len(filtered_res)}건 발견. 실제로 쓸 건 몇 개 안 될겁니다🎉")
+                    for idx, item in enumerate(filtered_res):
+                        unique_key = f"cb_{current_cat}_{idx}_{item['링크']}"
+                        
+                        with st.container(border=True):
+                            c_check, c_txt = st.columns([0.05, 0.95])
+                            with c_check:
+                                st.checkbox(
+                                    "", 
+                                    key=unique_key,
+                                    value=(item['링크'] in cart_links), 
+                                    on_change=toggle_cart_item,
+                                    args=(item, unique_key)
+                                )
+                            with c_txt:
+                                st.markdown(f"**[{item['키워드']}] {item['제목']}**")
+                                st.caption(f"🗞 {item['출처']}  |  🗓 {item['기사일자']}  |  ⭐ {item['연관도점수']}점")
+                                st.markdown(f"[🔗 기사 원문 보러가기]({item['링크']})")
                 else:
-                    st.warning("👈 왼쪽 사이드바에서 '뉴스 찾기' 버튼을 누르면 최소한 뭔가는 나옵니다")
+                    if st.session_state.news_results:
+                        st.info(f"💦 '{current_cat}' 쪽은 딱히 쓸만한 뉴스는 없습니다")
+                    else:
+                        st.warning("👈 왼쪽 사이드바에서 '뉴스 찾기' 버튼을 누르면 최소한 뭔가는 나옵니다")
 
 with col_cart:
     st.subheader("🛒 쓸만한 뉴스 장바구니")
     
-    if st.session_state.cart_list:
-        with st.container(border=True):
+    # [수정] 장바구니 영역 스크롤 고정
+    with st.container(height=600, border=True):
+        if st.session_state.cart_list:
             st.markdown(f"**현재 {len(st.session_state.cart_list)}개 보관 중. 줄어들 예정**")
             
-            # 미리보기 데이터프레임
             cart_df = pd.DataFrame(st.session_state.cart_list)
             st.dataframe(
                 cart_df[["키워드", "제목"]], 
@@ -287,5 +296,5 @@ with col_cart:
             if st.button("🔄 후회를 포함하여 다시 처음부터", use_container_width=True):
                 st.session_state.cart_list = []
                 st.rerun()
-    else:
-        st.info("아직 쓸만한 게 없습니다 🍂\n\n왼쪽 리스트에서 필요한 기사를 체크하면 여기에 들어와요.")
+        else:
+            st.info("아직 쓸만한 게 없습니다 🍂\n\n왼쪽 리스트에서 필요한 기사를 체크하면 여기에 들어와요.")
