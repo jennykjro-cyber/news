@@ -124,15 +124,19 @@ def to_excel(data_list):
 # =================================================
 # 3. UI/UX 구성 및 바구니 동기화 로직
 # =================================================
-st.set_page_config(page_title="진주햄 뉴스 클리핑 시스템", layout="wide")
+st.set_page_config(page_title="진주햄 뉴스 클리핑", page_icon="🥓", layout="wide")
 
-# [수정된 로직] 기사의 링크(URL)를 기준으로 바구니 담기 기능을 처리합니다.
+# [핵심 수정] key를 사용하여 체크박스 상태를 제어하는 함수
 def toggle_cart_item(item, key):
-    current_cart_links = [c['링크'] for c in st.session_state.cart_list]
-    if st.session_state[key]: # 체크됨
-        if item['링크'] not in current_cart_links:
+    # 현재 체크박스의 상태(True/False)를 가져옴
+    is_checked = st.session_state[key]
+    current_links = [c['링크'] for c in st.session_state.cart_list]
+    
+    if is_checked:
+        if item['링크'] not in current_links:
             st.session_state.cart_list.append(item)
-    else: # 체크 해제됨
+    else:
+        # 링크가 일치하는 항목을 제거 (리스트 재구성)
         st.session_state.cart_list = [c for c in st.session_state.cart_list if c['링크'] != item['링크']]
 
 def add_group():
@@ -149,56 +153,73 @@ def add_sub(group_name):
         save_keywords(st.session_state.keyword_mapping)
     st.session_state.new_sub_input = ""
 
+# 사이드바 설정
 with st.sidebar:
-    st.header("⚙️ 검색 설정")
+    st.title("🥓 진주햄 뉴스봇")
+    st.write("---")
+    
+    st.subheader("⚙️ 검색 설정")
     start_d, end_d = get_fixed_date_range()
-    st.info(f"📅 수집: {start_d} ~ {end_d}")
     
-    min_score = st.slider("🎯 연관도 필터 점수", 0, 5, 2)
+    # 날짜 표시를 좀 더 예쁘게
+    st.info(f"📅 **수집 기간**\n\n{start_d.strftime('%m.%d')} (금) ~ {end_d.strftime('%m.%d')} (오늘)")
     
-    if st.button("🌟 뉴스 수집 시작", type="primary", use_container_width=True):
-        with st.spinner('뉴스를 검색 중입니다...'):
+    min_score = st.slider("🎯 **연관도 필터** (높을수록 정확)", 0, 5, 2)
+    
+    st.write("") # 여백
+    # [요청사항 반영] 위트 있는 문구와 이모티콘 추가
+    if st.button("🚀 이번 주 신나는 뉴스 찾기!", type="primary", use_container_width=True):
+        with st.spinner('🕵️‍♀️ 이번 주 재미있는 일들을 열심히 찾는 중이에요! 잠시만요... 🥓'):
             st.session_state.news_results = collect_news_final(st.session_state.keyword_mapping, start_d, end_d)
-            st.session_state.cart_list = [] # 수집 시 바구니 초기화
+            st.session_state.cart_list = [] 
             st.rerun()
 
     st.divider()
     
-    st.subheader("🛠️ 키워드 관리")
+    st.subheader("📝 키워드 관리실")
+    
+    # 2단 컬럼 배치 (가로형)
     col1, col2 = st.columns(2)
     with col1:
-        st.text_input("📁 대분류 추가", key="new_group_input", on_change=add_group, placeholder="분류명")
+        st.text_input("대분류", key="new_group_input", on_change=add_group, placeholder="분류명")
     with col2:
         keys = list(st.session_state.keyword_mapping.keys())
-        sel_g = st.selectbox("🎯 대상 선택", options=keys) if keys else st.selectbox("대상 없음", ["선택"])
+        sel_g = st.selectbox("선택", options=keys, label_visibility="visible") if keys else st.selectbox("없음", ["-"])
 
     if keys:
-        st.text_input(f"➕ '{sel_g}' 키워드 추가", key="new_sub_input", on_change=add_sub, args=(sel_g,), placeholder="엔터로 추가")
+        st.text_input(f"➕ '{sel_g}'에 키워드 쏙 넣기", key="new_sub_input", on_change=add_sub, args=(sel_g,), placeholder="입력 후 엔터!")
 
-    with st.expander("📝 현재 키워드 리스트 확인/삭제", expanded=True):
-        with st.container(height=400, border=False):
+    # 스크롤 박스 (높이 고정)
+    with st.expander("📋 등록된 키워드 리스트 (펼치기)", expanded=True):
+        with st.container(height=350, border=False):
+            if not st.session_state.keyword_mapping:
+                st.caption("등록된 키워드가 없습니다.")
             for g, subs in list(st.session_state.keyword_mapping.items()):
-                c_del, c_title = st.columns([0.2, 0.8])
-                if c_del.button("❌", key=f"del_{g}"):
+                c_del, c_title = st.columns([0.15, 0.85])
+                if c_del.button("🗑️", key=f"del_{g}"):
                     del st.session_state.keyword_mapping[g]
                     save_keywords(st.session_state.keyword_mapping)
                     st.rerun()
                 c_title.markdown(f"**{g}**")
-                st.caption(f"{', '.join(subs) if subs else '키워드 없음'}")
-                st.write("")
+                # 태그 느낌으로 표시
+                tags = [f"`{s}`" for s in subs]
+                c_title.markdown(" ".join(tags))
+                st.markdown("---")
 
 # 메인 영역
-st.title("🗞️ 주간 뉴스 클리핑 시스템")
+st.title("📰 Weekly News Clipping")
+st.caption("진주햄의 미래를 위한 따끈따끈한 뉴스를 배달해 드려요!")
+st.write("")
 
 col_main, col_cart = st.columns([1.3, 0.7])
 
 with col_main:
-    st.subheader("📌 뉴스 검색 결과")
+    st.subheader("🔍 검색 결과")
     
     all_categories = ["전체"] + list(st.session_state.keyword_mapping.keys())
-    tabs = st.tabs(all_categories)
+    tabs = st.tabs([f"  {cat}  " for cat in all_categories]) # 탭 간격 조금 벌리기
     
-    # 바구니에 담긴 링크 목록 추출 (비교용)
+    # 바구니에 담긴 링크 목록 (체크박스 동기화용)
     cart_links = [item['링크'] for item in st.session_state.cart_list]
     
     for i, tab in enumerate(tabs):
@@ -209,48 +230,62 @@ with col_main:
                 filtered_res = [r for r in filtered_res if r['키워드'] == current_cat]
             
             if filtered_res:
-                st.caption(f"검색 결과: {len(filtered_res)}건")
+                st.success(f"총 {len(filtered_res)}건의 소식을 찾았습니다! 🎉")
                 for idx, item in enumerate(filtered_res):
-                    # 고유 키 생성
-                    cb_key = f"cb_{item['링크']}_{st.session_state.reset_key}"
+                    # [오류 해결 핵심] Key에 current_cat(현재 탭 이름)을 포함시켜 중복 방지
+                    # 예: cb_전체_http://... vs cb_유통_http://... 
+                    unique_key = f"cb_{current_cat}_{idx}_{item['링크']}"
                     
-                    col_check, col_content = st.columns([0.05, 0.95])
-                    with col_check:
-                        # value 값을 링크 존재 여부로 판단하여 체크 상태 동기화
-                        st.checkbox("", 
-                                    key=cb_key, 
-                                    value=(item['링크'] in cart_links),
-                                    on_change=toggle_cart_item,
-                                    args=(item, cb_key))
-                    
-                    with col_content:
-                        st.markdown(f"**[{item['키워드']}]** {item['제목']}")
-                        st.caption(f"{item['출처']} | {item['기사일자']} | 연관도: {item['연관도점수']}점 | [원문보기]({item['링크']})")
-                    st.write("")
+                    with st.container(border=True):
+                        c_check, c_txt = st.columns([0.05, 0.95])
+                        with c_check:
+                            st.checkbox(
+                                "", 
+                                key=unique_key,
+                                value=(item['링크'] in cart_links), # 값은 실제 바구니 데이터 기준
+                                on_change=toggle_cart_item,
+                                args=(item, unique_key)
+                            )
+                        with c_txt:
+                            st.markdown(f"**[{item['키워드']}] {item['제목']}**")
+                            st.caption(f"🗞 {item['출처']}  |  🗓 {item['기사일자']}  |  ⭐ {item['연관도점수']}점")
+                            st.markdown(f"[🔗 기사 원문 보러가기]({item['링크']})")
             else:
-                st.info(f"'{current_cat}' 탭에 표시할 뉴스가 없습니다.")
+                if st.session_state.news_results:
+                    st.info(f"💦 '{current_cat}' 관련 뉴스는 없네요. 다른 탭을 확인해보세요!")
+                else:
+                    st.warning("👈 왼쪽 사이드바에서 '뉴스 찾기' 버튼을 눌러주세요!")
 
 with col_cart:
-    st.subheader("🛒 추출 바구니")
+    st.subheader("🛒 뉴스 장바구니")
+    
     if st.session_state.cart_list:
-        cart_df = pd.DataFrame(st.session_state.cart_list)
-        st.dataframe(cart_df[["키워드", "출처", "제목"]], use_container_width=True, hide_index=True)
-        
-        st.write(f"현재 **{len(st.session_state.cart_list)}**개 기사 선택됨")
-        
-        file_name = f"진주햄_뉴스클리핑_{end_d.strftime('%Y%m%d')}.xlsx"
-        st.download_button(
-            label="📥 엑셀 파일 다운로드",
-            data=to_excel(st.session_state.cart_list),
-            file_name=file_name,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-            type="primary"
-        )
-        
-        if st.button("🔄 선택 전체 해제", use_container_width=True):
-            st.session_state.reset_key += 1
-            st.session_state.cart_list = []
-            st.rerun()
+        with st.container(border=True):
+            st.markdown(f"**현재 {len(st.session_state.cart_list)}개의 기사를 담았어요!**")
+            
+            # 미리보기 데이터프레임
+            cart_df = pd.DataFrame(st.session_state.cart_list)
+            st.dataframe(
+                cart_df[["키워드", "제목"]], 
+                use_container_width=True, 
+                hide_index=True,
+                height=300
+            )
+            
+            st.write("")
+            file_name = f"진주햄_뉴스클리핑_{end_d.strftime('%Y%m%d')}.xlsx"
+            
+            st.download_button(
+                label="📥 엑셀 파일로 다운로드 받기",
+                data=to_excel(st.session_state.cart_list),
+                file_name=file_name,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+                type="primary"
+            )
+            
+            if st.button("🔄 바구니 비우기", use_container_width=True):
+                st.session_state.cart_list = []
+                st.rerun()
     else:
-        st.info("리스트에서 체크박스를 선택하면 여기에 담깁니다.")
+        st.info("비어있음! 🍂\n\n왼쪽 리스트에서 필요한 기사를 체크하면 여기에 쏙 들어와요.")
