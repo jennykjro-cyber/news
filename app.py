@@ -45,7 +45,6 @@ if "reset_key" not in st.session_state:
 # =================================================
 def get_fixed_date_range():
     today = datetime.today()
-    # 지난 금요일 찾기 (오늘이 금요일이면 오늘, 아니면 가장 가까운 과거 금요일)
     days_since_friday = (today.weekday() - 4) % 7
     last_friday = today - timedelta(days=days_since_friday)
     return last_friday.date(), today.date()
@@ -126,7 +125,6 @@ def to_excel(data_list):
 # =================================================
 st.set_page_config(page_title="진주햄 뉴스 클리핑 시스템", layout="wide")
 
-# 키워드 추가 처리 함수들 (입력창 비우기용)
 def add_group():
     new_g = st.session_state.new_group_input.strip()
     if new_g and new_g not in st.session_state.keyword_mapping:
@@ -146,7 +144,6 @@ with st.sidebar:
     start_d, end_d = get_fixed_date_range()
     st.caption(f"수집 대상: {start_d} ~ {end_d}")
     
-    # [수정] 점수 범위를 0~5점으로 축소
     min_score = st.slider("🎯 연관도 필터 점수", 0, 5, 2)
     
     if st.button("🌟 뉴스 수집 시작", type="primary", use_container_width=True):
@@ -157,27 +154,27 @@ with st.sidebar:
 
     st.divider()
     
-    with st.expander("🛠️ 키워드 관리 (클릭하여 열기)", expanded=False):
-        # 대분류 추가 (on_change 사용으로 엔터 시 즉시 비움)
-        st.text_input("새 대분류 입력 후 엔터", key="new_group_input", on_change=add_group)
+    with st.expander("🛠️ 키워드 관리", expanded=True):
+        st.text_input("새 대분류 추가 (엔터)", key="new_group_input", on_change=add_group)
         
         keys = list(st.session_state.keyword_mapping.keys())
         if keys:
-            st.divider()
             sel_g = st.selectbox("대분류 선택", options=keys)
+            st.text_input(f"'{sel_g}'에 키워드 추가 (엔터)", key="new_sub_input", on_change=add_sub, args=(sel_g,))
             
-            # 소분류 추가 (on_change 사용으로 엔터 시 즉시 비움)
-            st.text_input(f"'{sel_g}' 키워드 추가 후 엔터", key="new_sub_input", on_change=add_sub, args=(sel_g,))
-            
-            st.divider()
-            for g, subs in list(st.session_state.keyword_mapping.items()):
-                col_del, col_name = st.columns([0.2, 0.8])
-                if col_del.button("🗑️", key=f"del_{g}"):
-                    del st.session_state.keyword_mapping[g]
-                    save_keywords(st.session_state.keyword_mapping)
-                    st.rerun()
-                col_name.write(f"**{g}**")
-                st.caption(f"{', '.join(subs)}")
+            st.write("---")
+            # [수정] 키워드 리스트를 스크롤 가능한 컨테이너에 배치하여 공간 효율화
+            st.write("📋 현재 등록된 리스트")
+            with st.container(height=300, border=False):
+                for g, subs in list(st.session_state.keyword_mapping.items()):
+                    col_del, col_name = st.columns([0.2, 0.8])
+                    if col_del.button("🗑️", key=f"del_{g}"):
+                        del st.session_state.keyword_mapping[g]
+                        save_keywords(st.session_state.keyword_mapping)
+                        st.rerun()
+                    col_name.markdown(f"**{g}**")
+                    st.caption(f"{', '.join(subs)}")
+                    st.divider()
 
 # 메인 영역
 st.title("🗞️ 주간 뉴스 클리핑 시스템")
@@ -193,7 +190,6 @@ with col_main:
     for i, tab in enumerate(tabs):
         with tab:
             current_cat = all_categories[i]
-            
             filtered_res = [r for r in st.session_state.news_results if r.get('연관도점수', 0) >= min_score]
             if current_cat != "전체":
                 filtered_res = [r for r in filtered_res if r['키워드'] == current_cat]
@@ -202,7 +198,6 @@ with col_main:
                 st.caption(f"검색 결과: {len(filtered_res)}건")
                 for idx, item in enumerate(filtered_res):
                     cb_key = f"news_{current_cat}_{idx}_v{st.session_state.reset_key}"
-                    
                     col_check, col_content = st.columns([0.05, 0.95])
                     with col_check:
                         is_checked = st.checkbox("", key=cb_key, value=item in st.session_state.cart_list)
@@ -210,7 +205,6 @@ with col_main:
                             st.session_state.cart_list.append(item)
                         elif not is_checked and item in st.session_state.cart_list:
                             st.session_state.cart_list.remove(item)
-                    
                     with col_content:
                         st.markdown(f"**[{item['키워드']}]** {item['제목']}")
                         st.caption(f"{item['출처']} | {item['기사일자']} | 연관도: {item['연관도점수']}점 | [원문보기]({item['링크']})")
@@ -223,7 +217,6 @@ with col_cart:
     if st.session_state.cart_list:
         cart_df = pd.DataFrame(st.session_state.cart_list)
         st.dataframe(cart_df[["키워드", "출처", "제목"]], use_container_width=True, hide_index=True)
-        
         st.write(f"현재 **{len(st.session_state.cart_list)}**개 기사 선택됨")
         
         file_name = f"진주햄_뉴스클리핑_{end_d.strftime('%Y%m%d')}.xlsx"
