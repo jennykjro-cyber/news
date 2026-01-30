@@ -176,7 +176,7 @@ with st.sidebar:
 
     st.divider()
     
-    with st.expander("📝 키워드 관리실 (펼치기)", expanded=false)
+    with st.expander("📝 키워드 관리실 (펼치기)", expanded=false):
     
     # 2단 컬럼 배치 (가로형)
     col1, col2 = st.columns(2)
