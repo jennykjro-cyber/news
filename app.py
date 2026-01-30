@@ -126,6 +126,21 @@ def to_excel(data_list):
 # =================================================
 st.set_page_config(page_title="진주햄 뉴스 클리핑 시스템", layout="wide")
 
+# 키워드 추가 처리 함수들 (입력창 비우기용)
+def add_group():
+    new_g = st.session_state.new_group_input.strip()
+    if new_g and new_g not in st.session_state.keyword_mapping:
+        st.session_state.keyword_mapping[new_g] = []
+        save_keywords(st.session_state.keyword_mapping)
+    st.session_state.new_group_input = ""
+
+def add_sub(group_name):
+    new_s = st.session_state.new_sub_input.strip()
+    if new_s and new_s not in st.session_state.keyword_mapping[group_name]:
+        st.session_state.keyword_mapping[group_name].append(new_s)
+        save_keywords(st.session_state.keyword_mapping)
+    st.session_state.new_sub_input = ""
+
 with st.sidebar:
     st.header("⚙️ 검색 설정")
     start_d, end_d = get_fixed_date_range()
@@ -143,24 +158,16 @@ with st.sidebar:
     st.divider()
     
     with st.expander("🛠️ 키워드 관리 (클릭하여 열기)", expanded=False):
-        new_g = st.text_input("새 대분류 입력 후 엔터")
-        if new_g:
-            if new_g not in st.session_state.keyword_mapping:
-                st.session_state.keyword_mapping[new_g] = []
-                save_keywords(st.session_state.keyword_mapping)
-                st.rerun()
+        # 대분류 추가 (on_change 사용으로 엔터 시 즉시 비움)
+        st.text_input("새 대분류 입력 후 엔터", key="new_group_input", on_change=add_group)
         
         keys = list(st.session_state.keyword_mapping.keys())
         if keys:
             st.divider()
             sel_g = st.selectbox("대분류 선택", options=keys)
             
-            new_s = st.text_input(f"'{sel_g}' 키워드 추가 후 엔터")
-            if new_s:
-                if new_s not in st.session_state.keyword_mapping[sel_g]:
-                    st.session_state.keyword_mapping[sel_g].append(new_s)
-                    save_keywords(st.session_state.keyword_mapping)
-                    st.rerun()
+            # 소분류 추가 (on_change 사용으로 엔터 시 즉시 비움)
+            st.text_input(f"'{sel_g}' 키워드 추가 후 엔터", key="new_sub_input", on_change=add_sub, args=(sel_g,))
             
             st.divider()
             for g, subs in list(st.session_state.keyword_mapping.items()):
