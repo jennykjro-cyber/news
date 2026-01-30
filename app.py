@@ -156,10 +156,11 @@ def add_sub(group_name):
 # 사이드바 설정
 with st.sidebar:
     st.title("🥓 진주햄 뉴스봇")
-    st.caption(
-    "일은 줄어들지 않으니,\n\n"
-    "시간이라도 줄여보려고 만든 자동화 시스템 ⭐"
+    st.markdown(
+    "일은 줄어들지 않으니,<br>시간이라도 줄여보려고 만든 자동화 시스템 ⭐",
+    unsafe_allow_html=True
 )
+
     st.subheader("⚙️ 검색 설정")
     start_d, end_d = get_fixed_date_range()
     
