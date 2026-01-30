@@ -70,7 +70,7 @@ def collect_news_final(mapping, start_date, end_date):
     google_news = GNews(language="ko", country="KR", max_results=25)
     all_rows = []
     all_search_kws = [kw for sublist in mapping.values() for kw in sublist]
-    exclude_keywords = ["출시", "런칭", "신제품", "이벤트", "증정", "할인행사", "포토존", "팝업스토어", "증시", "주가", "상한가"]
+    exclude_keywords = ["출시", "런칭", "신제품", "이벤트", "증정", "할인행사", "포토존", "증시", "주가", "상한가"]
     
     progress_bar = st.progress(0)
     groups = list(mapping.items())
@@ -124,7 +124,7 @@ def to_excel(data_list):
 # =================================================
 # 3. UI/UX 구성 및 바구니 동기화 로직
 # =================================================
-st.set_page_config(page_title="진주햄 뉴스 클리핑", page_icon="🥓", layout="wide")
+st.set_page_config(page_title="진주햄 뉴스 클리핑 by ro", page_icon="🐷", layout="wide")
 
 # [핵심 수정] key를 사용하여 체크박스 상태를 제어하는 함수
 def toggle_cart_item(item, key):
