@@ -156,7 +156,7 @@ def add_sub(group_name):
 # 사이드바 설정
 with st.sidebar:
     st.title("🥓 진주햄 뉴스봇")
-    st.write("---")
+    st.write("매주 하던 그 작업, 이번엔 덜 피곤하게")
     
     st.subheader("⚙️ 검색 설정")
     start_d, end_d = get_fixed_date_range()
