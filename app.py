@@ -121,9 +121,18 @@ def to_excel(data_list):
     return output.getvalue()
 
 # =================================================
-# 3. UI/UX 구성 (사이드바 + 메인 탭 구조)
+# 3. UI/UX 구성 및 바구니 로직 수정
 # =================================================
 st.set_page_config(page_title="진주햄 뉴스 클리핑 시스템", layout="wide")
+
+# [핵심 수정] 체크박스 클릭 시 즉시 바구니를 업데이트하는 함수
+def toggle_cart(item, key):
+    if st.session_state[key]:
+        if item not in st.session_state.cart_list:
+            st.session_state.cart_list.append(item)
+    else:
+        if item in st.session_state.cart_list:
+            st.session_state.cart_list.remove(item)
 
 def add_group():
     new_g = st.session_state.new_group_input.strip()
@@ -155,7 +164,6 @@ with st.sidebar:
     st.divider()
     
     st.subheader("🛠️ 키워드 관리")
-    # [UX 개선] 입력창을 가로로 배치하여 세로 길이를 축소
     col1, col2 = st.columns(2)
     with col1:
         st.text_input("📁 대분류 추가", key="new_group_input", on_change=add_group, placeholder="분류명")
@@ -166,11 +174,9 @@ with st.sidebar:
     if keys:
         st.text_input(f"➕ '{sel_g}' 키워드 추가", key="new_sub_input", on_change=add_sub, args=(sel_g,), placeholder="엔터로 추가")
 
-    # [UX 개선] 리스트 확인 영역을 깔끔한 Expander로 감싸고 스크롤 박스 유지
     with st.expander("📝 현재 키워드 리스트 확인/삭제", expanded=True):
         with st.container(height=400, border=False):
             for g, subs in list(st.session_state.keyword_mapping.items()):
-                # 대분류 이름과 삭제 버튼을 한 줄에 배치
                 c_del, c_title = st.columns([0.2, 0.8])
                 if c_del.button("❌", key=f"del_{g}"):
                     del st.session_state.keyword_mapping[g]
@@ -178,7 +184,7 @@ with st.sidebar:
                     st.rerun()
                 c_title.markdown(f"**{g}**")
                 st.caption(f"{', '.join(subs) if subs else '키워드 없음'}")
-                st.write("") # 간격 조절
+                st.write("")
 
 # 메인 영역
 st.title("🗞️ 주간 뉴스 클리핑 시스템")
@@ -201,14 +207,17 @@ with col_main:
             if filtered_res:
                 st.caption(f"검색 결과: {len(filtered_res)}건")
                 for idx, item in enumerate(filtered_res):
-                    cb_key = f"news_{current_cat}_{idx}_v{st.session_state.reset_key}"
+                    # [핵심 수정] 체크박스 상태 관리를 위해 고유 키와 on_change 함수 부여
+                    cb_key = f"cb_{item['링크']}_{st.session_state.reset_key}"
+                    
                     col_check, col_content = st.columns([0.05, 0.95])
                     with col_check:
-                        is_checked = st.checkbox("", key=cb_key, value=item in st.session_state.cart_list)
-                        if is_checked and item not in st.session_state.cart_list:
-                            st.session_state.cart_list.append(item)
-                        elif not is_checked and item in st.session_state.cart_list:
-                            st.session_state.cart_list.remove(item)
+                        st.checkbox("", 
+                                    key=cb_key, 
+                                    value=(item in st.session_state.cart_list), 
+                                    on_change=toggle_cart, 
+                                    args=(item, cb_key))
+                    
                     with col_content:
                         st.markdown(f"**[{item['키워드']}]** {item['제목']}")
                         st.caption(f"{item['출처']} | {item['기사일자']} | 연관도: {item['연관도점수']}점 | [원문보기]({item['링크']})")
@@ -219,8 +228,10 @@ with col_main:
 with col_cart:
     st.subheader("🛒 추출 바구니")
     if st.session_state.cart_list:
+        # 바구니 목록 표시
         cart_df = pd.DataFrame(st.session_state.cart_list)
         st.dataframe(cart_df[["키워드", "출처", "제목"]], use_container_width=True, hide_index=True)
+        
         st.write(f"현재 **{len(st.session_state.cart_list)}**개 기사 선택됨")
         
         file_name = f"진주햄_뉴스클리핑_{end_d.strftime('%Y%m%d')}.xlsx"
