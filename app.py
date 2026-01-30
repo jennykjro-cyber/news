@@ -176,19 +176,18 @@ with st.sidebar:
 
     st.divider()
     
-    st.expander("📝 키워드 관리실")
     with st.expander("📝 키워드 (클릭하여 열기)", expanded=False):
     
     # 2단 컬럼 배치 (가로형)
-    col1, col2 = st.columns(2)
-    with col1:
-        st.text_input("대분류", key="new_group_input", on_change=add_group, placeholder="분류명")
-    with col2:
-        keys = list(st.session_state.keyword_mapping.keys())
-        sel_g = st.selectbox("선택", options=keys, label_visibility="visible") if keys else st.selectbox("없음", ["-"])
-    if keys:
-        st.text_input(f"➕ '{sel_g}'에 키워드 쏙 넣기", key="new_sub_input", on_change=add_sub, args=(sel_g,), placeholder="입력 후 엔터!")
-    st.markdown("---")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.text_input("대분류", key="new_group_input", on_change=add_group, placeholder="분류명")
+        with col2:
+            keys = list(st.session_state.keyword_mapping.keys())
+            sel_g = st.selectbox("선택", options=keys, label_visibility="visible") if keys else st.selectbox("없음", ["-"])
+        if keys:
+            st.text_input(f"➕ '{sel_g}'에 키워드 쏙 넣기", key="new_sub_input", on_change=add_sub, args=(sel_g,), placeholder="입력 후 엔터!")
+        st.markdown("---")
 
 # 기존 코드를 아래 코드로 대체하세요
     with st.expander("📋 등록된 키워드 리스트 (펼치기)", expanded=true):
