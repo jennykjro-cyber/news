@@ -45,9 +45,10 @@ if "reset_key" not in st.session_state:
 # =================================================
 def get_fixed_date_range():
     today = datetime.today()
-    this_thursday = today - timedelta(days=(today.weekday() - 3) % 7)
-    last_friday = this_thursday - timedelta(days=6)
-    return last_friday.date(), this_thursday.date()
+    # 지난 금요일 찾기 (오늘이 금요일이면 오늘, 아니면 가장 가까운 과거 금요일)
+    days_since_friday = (today.weekday() - 4) % 7
+    last_friday = today - timedelta(days=days_since_friday)
+    return last_friday.date(), today.date()
 
 def parse_news_date(date_str):
     try:
@@ -106,7 +107,6 @@ def to_excel(data_list):
     df = pd.DataFrame(data_list)
     output = BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        # 제목 열에 하이퍼링크를 넣기 위해 원본 링크 데이터는 유지하되 엑셀 시트에는 안보이게 처리
         export_df = df[["키워드", "출처", "기사일자", "제목"]]
         export_df.to_excel(writer, index=False, sheet_name="뉴스클리핑")
         
@@ -115,7 +115,6 @@ def to_excel(data_list):
         link_format = workbook.add_format({'font_color': 'blue', 'underline': 1})
         
         for row_num, link in enumerate(df['링크']):
-            # D열(3번 인덱스) 제목 셀에 하이퍼링크 심기
             worksheet.write_url(row_num + 1, 3, link, link_format, df.iloc[row_num]['제목'])
             
         worksheet.set_column('A:C', 15)
@@ -132,7 +131,8 @@ with st.sidebar:
     start_d, end_d = get_fixed_date_range()
     st.caption(f"수집 대상: {start_d} ~ {end_d}")
     
-    min_score = st.slider("🎯 연관도 필터 점수", 0, 10, 3)
+    # [수정] 점수 범위를 0~5점으로 축소
+    min_score = st.slider("🎯 연관도 필터 점수", 0, 5, 2)
     
     if st.button("🌟 뉴스 수집 시작", type="primary", use_container_width=True):
         with st.spinner('뉴스를 검색 중입니다...'):
@@ -142,9 +142,7 @@ with st.sidebar:
 
     st.divider()
     
-    # [수정] 엔터로 키워드 추가 기능 포함
     with st.expander("🛠️ 키워드 관리 (클릭하여 열기)", expanded=False):
-        # 대분류 추가 (엔터 입력 시 즉시 실행)
         new_g = st.text_input("새 대분류 입력 후 엔터")
         if new_g:
             if new_g not in st.session_state.keyword_mapping:
@@ -157,7 +155,6 @@ with st.sidebar:
             st.divider()
             sel_g = st.selectbox("대분류 선택", options=keys)
             
-            # 소분류 추가 (엔터 입력 시 즉시 실행)
             new_s = st.text_input(f"'{sel_g}' 키워드 추가 후 엔터")
             if new_s:
                 if new_s not in st.session_state.keyword_mapping[sel_g]:
@@ -166,7 +163,6 @@ with st.sidebar:
                     st.rerun()
             
             st.divider()
-            # 삭제 및 현재 리스트 확인
             for g, subs in list(st.session_state.keyword_mapping.items()):
                 col_del, col_name = st.columns([0.2, 0.8])
                 if col_del.button("🗑️", key=f"del_{g}"):
@@ -184,7 +180,6 @@ col_main, col_cart = st.columns([1.3, 0.7])
 with col_main:
     st.subheader("📌 뉴스 검색 결과")
     
-    # 카테고리별 탭 생성
     all_categories = ["전체"] + list(st.session_state.keyword_mapping.keys())
     tabs = st.tabs(all_categories)
     
@@ -192,7 +187,6 @@ with col_main:
         with tab:
             current_cat = all_categories[i]
             
-            # 필터링 로직
             filtered_res = [r for r in st.session_state.news_results if r.get('연관도점수', 0) >= min_score]
             if current_cat != "전체":
                 filtered_res = [r for r in filtered_res if r['키워드'] == current_cat]
