@@ -213,6 +213,8 @@ with st.sidebar:
                     col_kw, col_kw_del = st.columns([0.85, 0.15])
                     col_kw.markdown(f"• {s}")
                     if col_kw_del.markdown(f'<p style="cursor:pointer;color:red;font-weight:bold;margin:0;">×</p>', unsafe_allow_html=True):
+                        st.markdown("---")
+                        
 # 메인 영역
 st.title("📰 Weekly News Clipping")
 st.caption("회사 때문에 읽는 뉴스, 대신 모아드립니다")
