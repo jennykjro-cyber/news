@@ -142,7 +142,7 @@ def add_sub(group_name):
 with st.sidebar:
     st.header("⚙️ 검색 설정")
     start_d, end_d = get_fixed_date_range()
-    st.caption(f"수집 대상: {start_d} ~ {end_d}")
+    st.info(f"📅 수집: {start_d} ~ {end_d}")
     
     min_score = st.slider("🎯 연관도 필터 점수", 0, 5, 2)
     
@@ -154,27 +154,31 @@ with st.sidebar:
 
     st.divider()
     
-    with st.expander("🛠️ 키워드 관리", expanded=True):
-        st.text_input("새 대분류 추가 (엔터)", key="new_group_input", on_change=add_group)
-        
+    st.subheader("🛠️ 키워드 관리")
+    # [UX 개선] 입력창을 가로로 배치하여 세로 길이를 축소
+    col1, col2 = st.columns(2)
+    with col1:
+        st.text_input("📁 대분류 추가", key="new_group_input", on_change=add_group, placeholder="분류명")
+    with col2:
         keys = list(st.session_state.keyword_mapping.keys())
-        if keys:
-            sel_g = st.selectbox("대분류 선택", options=keys)
-            st.text_input(f"'{sel_g}'에 키워드 추가 (엔터)", key="new_sub_input", on_change=add_sub, args=(sel_g,))
-            
-            st.write("---")
-            # [수정] 키워드 리스트를 스크롤 가능한 컨테이너에 배치하여 공간 효율화
-            st.write("📋 현재 등록된 리스트")
-            with st.container(height=300, border=False):
-                for g, subs in list(st.session_state.keyword_mapping.items()):
-                    col_del, col_name = st.columns([0.2, 0.8])
-                    if col_del.button("🗑️", key=f"del_{g}"):
-                        del st.session_state.keyword_mapping[g]
-                        save_keywords(st.session_state.keyword_mapping)
-                        st.rerun()
-                    col_name.markdown(f"**{g}**")
-                    st.caption(f"{', '.join(subs)}")
-                    st.divider()
+        sel_g = st.selectbox("🎯 대상 선택", options=keys) if keys else st.selectbox("대상 없음", ["선택"])
+
+    if keys:
+        st.text_input(f"➕ '{sel_g}' 키워드 추가", key="new_sub_input", on_change=add_sub, args=(sel_g,), placeholder="엔터로 추가")
+
+    # [UX 개선] 리스트 확인 영역을 깔끔한 Expander로 감싸고 스크롤 박스 유지
+    with st.expander("📝 현재 키워드 리스트 확인/삭제", expanded=True):
+        with st.container(height=400, border=False):
+            for g, subs in list(st.session_state.keyword_mapping.items()):
+                # 대분류 이름과 삭제 버튼을 한 줄에 배치
+                c_del, c_title = st.columns([0.2, 0.8])
+                if c_del.button("❌", key=f"del_{g}"):
+                    del st.session_state.keyword_mapping[g]
+                    save_keywords(st.session_state.keyword_mapping)
+                    st.rerun()
+                c_title.markdown(f"**{g}**")
+                st.caption(f"{', '.join(subs) if subs else '키워드 없음'}")
+                st.write("") # 간격 조절
 
 # 메인 영역
 st.title("🗞️ 주간 뉴스 클리핑 시스템")
