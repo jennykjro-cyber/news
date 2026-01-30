@@ -305,7 +305,7 @@ with col_cart:
                 type="primary"
             )
             
-            if st.button("🔄 후회를 포함하여 다시 처음부터", use_container_width=True):
+            if st.button("🔄 처음부터 다시 담기", use_container_width=True):
                 st.session_state.cart_list = []
                 st.rerun()
     else:
