@@ -190,7 +190,7 @@ with st.sidebar:
         st.markdown("---")
 
 # 기존 코드를 아래 코드로 대체하세요
-    with st.expander("📋 등록된 키워드 리스트 (펼치기)", expanded=true):
+    with st.expander("📋 등록된 키워드 리스트 (펼치기)", expanded=True):
         # height를 지정한 container가 있으면 내부에서 스크롤이 생깁니다.
         with st.container(height=350, border=False):
             if not st.session_state.keyword_mapping:
