@@ -150,4 +150,46 @@ with st.sidebar:
                 
                 kw_cols = st.columns(2)
                 for idx, s in enumerate(subs):
-                    with kw_cols
+                    with kw_cols[idx % 2]:
+                        if st.button(f"{s} ×", key=f"del_kw_{g}_{s}", use_container_width=True):
+                            st.session_state.keyword_mapping[g].remove(s); save_keywords(st.session_state.keyword_mapping); st.rerun()
+
+# 메인 화면
+st.title("📰 Weekly News Clipping")
+col_main, col_cart = st.columns([1.3, 0.7])
+
+with col_main:
+    st.subheader("🔍 검색 결과")
+    all_categories = ["전체"] + list(st.session_state.keyword_mapping.keys())
+    tabs = st.tabs([f" {cat} " for cat in all_categories])
+    cart_links = [item['링크'] for item in st.session_state.cart_list]
+    
+    for i, tab in enumerate(tabs):
+        with tab:
+            current_cat = all_categories[i]
+            filtered_res = [r for r in st.session_state.news_results if r.get('연관도점수', 0) >= min_score]
+            if current_cat != "전체": filtered_res = [r for r in filtered_res if r['키워드'] == current_cat]
+            
+            if filtered_res:
+                st.success(f"총 {len(filtered_res)}건 발견")
+                # [수정] 뉴스 리스트 스크롤: height=500 설정으로 5개 내외 유지
+                with st.container(height=550):
+                    for idx, item in enumerate(filtered_res):
+                        u_key = f"cb_{current_cat}_{idx}_{item['링크']}"
+                        with st.container(border=True):
+                            c_ch, c_tx = st.columns([0.05, 0.95])
+                            c_ch.checkbox("", key=u_key, value=(item['링크'] in cart_links), on_change=toggle_cart_item, args=(item, u_key))
+                            c_tx.markdown(f"**[{item['키워드']}] {item['제목']}**")
+                            c_tx.caption(f"🗞 {item['출처']} | 🗓 {item['기사일자']} | ⭐ {item['연관도점수']}점")
+                            c_tx.markdown(f"[🔗 기사 원문]({item['링크']})")
+            else: st.info("뉴스가 없습니다.")
+
+with col_cart:
+    st.subheader("🛒 장바구니")
+    if st.session_state.cart_list:
+        with st.container(border=True):
+            st.dataframe(pd.DataFrame(st.session_state.cart_list)[["키워드", "제목"]], use_container_width=True, hide_index=True, height=300)
+            st.download_button(label="📥 엑셀 다운로드", data=to_excel(st.session_state.cart_list), file_name=f"뉴스클리핑_{datetime.now().strftime('%Y%m%d')}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
+            if st.button("🔄 초기화", use_container_width=True):
+                st.session_state.cart_list = []; st.rerun()
+    else: st.info("기사를 담아주세요.")
