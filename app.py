@@ -284,7 +284,7 @@ with col_cart:
                 type="primary"
             )
             
-            if st.button("🔄 바구니 비우기", use_container_width=True):
+            if st.button("🔄 아무일도 없었던것 처럼 다시 고르기", use_container_width=True):
                 st.session_state.cart_list = []
                 st.rerun()
     else:
