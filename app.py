@@ -169,7 +169,7 @@ with st.sidebar:
     start_d, end_d = get_fixed_date_range()
     
     # 날짜 표시를 좀 더 예쁘게
-    st.info(f"📅 **어차피 이번 주 얘기만 합니다**\n\n{start_d.strftime('%m.%d')} (금) ~ {end_d.strftime('%m.%d')} (오늘)")
+    st.info(f"📅 **지난주 금요일부터 오늘까지만 보여드립니다**\n\n{start_d.strftime('%m.%d')} (금) ~ {end_d.strftime('%m.%d')} (오늘)")
     
     min_score = st.slider("🎯 **연관도 필터** (2추천)", 0, 5, 2)
     
