@@ -157,7 +157,9 @@ def add_sub(group_name):
 with st.sidebar:
     st.title("🥓 진주햄 뉴스봇")
     st.markdown(
-    "일은 줄어들지 않으니,<br>시간이라도 줄여보려고 만든 자동화 시스템⭐ <br>by로로🦝",
+    "일은 줄어들지 않으니,<br>시간이라도 줄여보려고 만든 자동화 시스템⭐ <br>
+    <span style="font-size:0.8em; color:#999;">by 로로 🦝</span>
+    """,
     unsafe_allow_html=True
 )
 
