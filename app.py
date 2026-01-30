@@ -55,7 +55,7 @@ def parse_news_date(date_str):
 
 def get_relevance_score(title, desc, all_keywords):
     score = 0
-    text = f"{title}{desc}".replace(" ", "").lower()
+    text = f"{title} {desc}".replace(" ", "").lower()
     title_only = title.replace(" ", "").lower()
     for kw in all_keywords:
         t = kw.replace(" ", "").lower()
@@ -69,65 +69,83 @@ def collect_news_final(mapping, start_date, end_date):
     google_news = GNews(language="ko", country="KR", max_results=25)
     all_rows = []
     all_search_kws = [kw for sub in mapping.values() for kw in sub]
-    exclude_keywords = ["출시", "런칭", "신제품", "이벤트", "증정", "할인행사", "증시", "주가"]
+    exclude_keywords = ["출시", "런칭", "신제품", "이벤트", "증정", "할인행사", "포토존", "팝업스토어", "증시", "주가"]
 
     for group, sub_kws in mapping.items():
         if not sub_kws:
             continue
-        query = f"{group} ({' OR '.join(sub_kws)})"
-        for a in google_news.get_news(query):
-            title = a.get("title", "")
-            if any(x in title for x in exclude_keywords):
+
+        search_query = f"{group} ({' OR '.join(sub_kws)})"
+        articles = google_news.get_news(search_query)
+
+        for a in articles:
+            title = a.get("title", "제목 없음")
+            if any(ex in title for ex in exclude_keywords):
                 continue
-            d = parse_news_date(a.get("published date", ""))
-            if not d or not (start_date <= d <= end_date):
+
+            article_date = parse_news_date(a.get("published date", ""))
+            if not article_date or not (start_date <= article_date <= end_date):
                 continue
-            score = get_relevance_score(title, a.get("description", ""), all_search_kws)
+
+            desc = a.get("description", "")
+            score = get_relevance_score(title, desc, all_search_kws)
+
             all_rows.append({
                 "키워드": group,
-                "출처": a.get("publisher", {}).get("title", ""),
-                "기사일자": d.strftime("%Y-%m-%d"),
+                "출처": a.get("publisher", {}).get("title", "출처 미상"),
+                "기사일자": article_date.strftime("%Y-%m-%d"),
                 "제목": title,
                 "링크": a.get("url", ""),
                 "연관도점수": score
             })
-    return sorted({r["링크"]: r for r in all_rows}.values(),
-                  key=lambda x: x["연관도점수"], reverse=True)
 
-def to_excel(data):
-    df = pd.DataFrame(data)
-    out = BytesIO()
-    with pd.ExcelWriter(out, engine="xlsxwriter") as writer:
-        df[["키워드", "출처", "기사일자", "제목"]].to_excel(writer, index=False)
-    return out.getvalue()
+    unique_rows = {r['링크']: r for r in all_rows}.values()
+    return sorted(list(unique_rows), key=lambda x: x['연관도점수'], reverse=True)
+
+def to_excel(data_list):
+    df = pd.DataFrame(data_list)
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        if not df.empty:
+            export_df = df[["키워드", "출처", "기사일자", "제목"]]
+            export_df.to_excel(writer, index=False, sheet_name="뉴스클리핑")
+        else:
+            pd.DataFrame().to_excel(writer, sheet_name="뉴스클리핑")
+    return output.getvalue()
 
 # =================================================
 # 3. UI
 # =================================================
-st.set_page_config(page_title="진주햄 뉴스 클리핑", layout="wide")
+st.set_page_config(page_title="진주햄 뉴스 클리핑", page_icon="🥓", layout="wide")
 
+# ---------- 사이드바 ----------
 with st.sidebar:
+    st.title("🥓 진주햄 뉴스봇")
     st.subheader("📝 키워드 관리실")
 
+    # 고정 높이 + 내부 스크롤
     with st.container(height=420):
         for cat in list(st.session_state.keyword_mapping.keys()):
             st.markdown(f"**{cat}**")
             for kw in list(st.session_state.keyword_mapping[cat]):
-                c1, c2, c3 = st.columns([0.6, 0.25, 0.15])
+                c1, c2, c3 = st.columns([0.55, 0.3, 0.15])
+
                 with c1:
                     st.write(kw)
+
                 with c2:
-                    new_cat = st.selectbox(
+                    move_to = st.selectbox(
                         "이동",
                         list(st.session_state.keyword_mapping.keys()),
                         index=list(st.session_state.keyword_mapping.keys()).index(cat),
                         key=f"move_{cat}_{kw}"
                     )
-                    if new_cat != cat:
+                    if move_to != cat:
                         st.session_state.keyword_mapping[cat].remove(kw)
-                        st.session_state.keyword_mapping[new_cat].append(kw)
+                        st.session_state.keyword_mapping[move_to].append(kw)
                         save_keywords(st.session_state.keyword_mapping)
                         st.rerun()
+
                 with c3:
                     if st.button("❌", key=f"del_{cat}_{kw}"):
                         st.session_state.keyword_mapping[cat].remove(kw)
@@ -135,49 +153,57 @@ with st.sidebar:
                         st.rerun()
 
     st.divider()
-    new_cat = st.text_input("대분류 추가", key="new_cat")
+
+    # 대분류 추가
+    new_cat = st.text_input("대분류 입력 후 Enter", key="new_cat")
     if new_cat:
         st.session_state.keyword_mapping.setdefault(new_cat, [])
         save_keywords(st.session_state.keyword_mapping)
         st.session_state.new_cat = ""
         st.rerun()
 
-    new_kw_cat = st.selectbox("키워드 추가 위치", st.session_state.keyword_mapping.keys())
+    # 키워드 추가
+    target_cat = st.selectbox("키워드 추가 위치", st.session_state.keyword_mapping.keys())
     new_kw = st.text_input("키워드 입력 후 Enter", key="new_kw")
     if new_kw:
-        st.session_state.keyword_mapping[new_kw_cat].append(new_kw)
+        st.session_state.keyword_mapping[target_cat].append(new_kw)
         save_keywords(st.session_state.keyword_mapping)
         st.session_state.new_kw = ""
         st.rerun()
 
-# =================================================
-# 메인
-# =================================================
+# ---------- 메인 ----------
 start_d, end_d = get_fixed_date_range()
-if st.button("뉴스 수집"):
+
+if st.button("🗂 이번 주 어쩔 수 없는 뉴스 수집"):
     st.session_state.news_results = collect_news_final(
         st.session_state.keyword_mapping, start_d, end_d
     )
+    st.session_state.cart_list = []
 
-col1, col2 = st.columns([1.3, 0.7])
+col_main, col_cart = st.columns([1.3, 0.7])
 
-with col1:
+with col_main:
     for item in st.session_state.news_results:
         if st.checkbox(item["제목"], key=item["링크"]):
             if item not in st.session_state.cart_list:
                 st.session_state.cart_list.append(item)
 
-with col2:
+with col_cart:
     st.subheader("🛒 쓸만한 뉴스 장바구니")
+
     if st.session_state.cart_list:
-        df = pd.DataFrame(st.session_state.cart_list)
+        cart_df = pd.DataFrame(st.session_state.cart_list)
         st.dataframe(
-            df[["키워드", "출처", "기사일자", "제목"]],
+            cart_df[["키워드", "출처", "기사일자", "제목"]],
             use_container_width=True,
             hide_index=True
         )
+
         st.download_button(
-            "엑셀 다운로드",
+            "📥 엑셀 다운로드",
             to_excel(st.session_state.cart_list),
-            "뉴스클리핑.xlsx"
+            "진주햄_뉴스클리핑.xlsx",
+            use_container_width=True
         )
+    else:
+        st.info("아직 쓸만한 뉴스가 없습니다.")
