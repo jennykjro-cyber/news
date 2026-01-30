@@ -197,23 +197,27 @@ with st.sidebar:
                 st.caption("등록된 키워드가 없습니다.")
             
             for g, subs in list(st.session_state.keyword_mapping.items()):
-                # 대분류 레이아웃
+                # 1. 대분류 레이아웃 (제목과 작은 삭제 버튼)
                 c_title, c_del = st.columns([0.8, 0.2])
                 c_title.markdown(f"**{g}**")
                 
-                # 대분류 삭제 버튼 (작게)
+                # 대분류 삭제 버튼을 텍스트 크기에 맞춰 작게
                 if c_del.button("삭제", key=f"del_g_{g}", help=f"{g} 전체 삭제"):
                     del st.session_state.keyword_mapping[g]
                     save_keywords(st.session_state.keyword_mapping)
                     st.rerun()
 
-                # 키워드 개별 삭제 (버튼 방식)
-                # 사이드바 폭이 좁으므로 2열로 배치하거나 한 줄씩 배치
-                for s in subs:
-                    col_kw, col_kw_del = st.columns([0.85, 0.15])
-                    col_kw.markdown(f"• {s}")
-                    if col_kw_del.markdown(f'<p style="cursor:pointer;color:red;font-weight:bold;margin:0;">×</p>', unsafe_allow_html=True):
-                        st.markdown("---")
+                # 2. 키워드 개별 삭제 (가로로 여러 개 배치)
+                # 한 줄에 키워드를 담을 빈 공간(container) 생성
+                kw_cols = st.columns(2) # 한 줄에 2~3개가 적당합니다.
+                for idx, s in enumerate(subs):
+                    with kw_cols[idx % 2]: # 2개 컬럼을 번갈아가며 사용
+                        # 키워드와 X를 합친 작은 버튼 생성
+                        if st.button(f"{s} ×", key=f"del_kw_{g}_{s}", use_container_width=True):
+                            st.session_state.keyword_mapping[g].remove(s)
+                            save_keywords(st.session_state.keyword_mapping)
+                            st.rerun()
+                st.markdown("---")
                         
 # 메인 영역
 st.title("📰 Weekly News Clipping")
