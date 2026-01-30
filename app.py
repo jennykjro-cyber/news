@@ -162,14 +162,14 @@ with st.sidebar:
     start_d, end_d = get_fixed_date_range()
     
     # 날짜 표시를 좀 더 예쁘게
-    st.info(f"📅 **수집 기간**\n\n{start_d.strftime('%m.%d')} (금) ~ {end_d.strftime('%m.%d')} (오늘)")
+    st.info(f"📅 **어차피 이번 주 얘기만 합니다**\n\n{start_d.strftime('%m.%d')} (금) ~ {end_d.strftime('%m.%d')} (오늘)")
     
     min_score = st.slider("🎯 **연관도 필터** (높을수록 정확)", 0, 5, 2)
     
     st.write("") # 여백
     # [요청사항 반영] 위트 있는 문구와 이모티콘 추가
-    if st.button("🚀 이번 주 신나는 뉴스 찾기!", type="primary", use_container_width=True):
-        with st.spinner('🕵️‍♀️ 이번 주 재미있는 일들을 열심히 찾는 중이에요! 잠시만요... 🥓'):
+    if st.button("🗂 이번 주 어쩔 수 없는 뉴스 수집", type="primary", use_container_width=True):
+        with st.spinner('🕵️‍♀️ 불가피하게 뉴스를 수집 중입니다. 커피라도 드시고 오세요.. 🥓'):
             st.session_state.news_results = collect_news_final(st.session_state.keyword_mapping, start_d, end_d)
             st.session_state.cart_list = [] 
             st.rerun()
@@ -208,7 +208,7 @@ with st.sidebar:
 
 # 메인 영역
 st.title("📰 Weekly News Clipping")
-st.caption("진주햄의 미래를 위한 따끈따끈한 뉴스를 배달해 드려요!")
+st.caption("회사 때문에 읽는 뉴스, 대신 모아드립니다")
 st.write("")
 
 col_main, col_cart = st.columns([1.3, 0.7])
@@ -230,7 +230,7 @@ with col_main:
                 filtered_res = [r for r in filtered_res if r['키워드'] == current_cat]
             
             if filtered_res:
-                st.success(f"총 {len(filtered_res)}건의 소식을 찾았습니다! 🎉")
+                st.success(f"총 {len(filtered_res)}건 발견. 실제로 쓸 건 몇 개 안 될겁니다🎉")
                 for idx, item in enumerate(filtered_res):
                     # [오류 해결 핵심] Key에 current_cat(현재 탭 이름)을 포함시켜 중복 방지
                     # 예: cb_전체_http://... vs cb_유통_http://... 
@@ -252,16 +252,16 @@ with col_main:
                             st.markdown(f"[🔗 기사 원문 보러가기]({item['링크']})")
             else:
                 if st.session_state.news_results:
-                    st.info(f"💦 '{current_cat}' 관련 뉴스는 없네요. 다른 탭을 확인해보세요!")
+                    st.info(f"💦 '{current_cat}' 쪽은 딱히 쓸만한 뉴스는 없습니다")
                 else:
-                    st.warning("👈 왼쪽 사이드바에서 '뉴스 찾기' 버튼을 눌러주세요!")
+                    st.warning("👈 왼쪽 사이드바에서 '뉴스 찾기' 버튼을 누르면 최소한 뭔가는 나옵니다")
 
 with col_cart:
-    st.subheader("🛒 뉴스 장바구니")
+    st.subheader("🛒 쓸만한 뉴스 장바구니")
     
     if st.session_state.cart_list:
         with st.container(border=True):
-            st.markdown(f"**현재 {len(st.session_state.cart_list)}개의 기사를 담았어요!**")
+            st.markdown(f"**현재 {len(st.session_state.cart_list)}개 보관 중. 줄어들 예정**")
             
             # 미리보기 데이터프레임
             cart_df = pd.DataFrame(st.session_state.cart_list)
@@ -276,7 +276,7 @@ with col_cart:
             file_name = f"진주햄_뉴스클리핑_{end_d.strftime('%Y%m%d')}.xlsx"
             
             st.download_button(
-                label="📥 엑셀 파일로 다운로드 받기",
+                label="📥 제출 가능한 형태로 저장-엑셀",
                 data=to_excel(st.session_state.cart_list),
                 file_name=file_name,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -288,4 +288,4 @@ with col_cart:
                 st.session_state.cart_list = []
                 st.rerun()
     else:
-        st.info("비어있음! 🍂\n\n왼쪽 리스트에서 필요한 기사를 체크하면 여기에 쏙 들어와요.")
+        st.info("아직 쓸만한 게 없습니다 🍂\n\n왼쪽 리스트에서 필요한 기사를 체크하면 여기에 들어와요.")
