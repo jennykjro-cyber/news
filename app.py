@@ -71,8 +71,6 @@ def collect_news_enhanced(mapping, start_date, end_date):
     google_news = GNews(language="ko", country="KR", max_results=15)
     all_rows = []
     all_search_kws = [kw for sublist in mapping.values() for kw in sublist]
-    
-    # [수정] 홍보성 제외 키워드 설정
     exclude_keywords = ["출시", "런칭", "신제품", "이벤트", "증정", "할인행사", "포토존", "팝업스토어"]
     
     progress_bar = st.progress(0)
@@ -83,18 +81,13 @@ def collect_news_enhanced(mapping, start_date, end_date):
             articles = google_news.get_news(kw)
             for a in articles:
                 title = a.get("title", "")
-                
-                # [수정] 홍보성 기사 필터링 (제목 기준)
                 if any(ex in title for ex in exclude_keywords):
                     continue
-
                 article_date = parse_news_date(a.get("published date", ""))
                 if not article_date or not (start_date <= article_date <= end_date):
                     continue
-                
                 desc = a.get("description", "")
                 score = get_relevance_score(title, desc, all_search_kws)
-                
                 all_rows.append({
                     "그룹": group,
                     "출처": a.get("publisher", {}).get("title", ""),
@@ -125,19 +118,36 @@ def to_excel(df: pd.DataFrame):
     return output.getvalue()
 
 # =================================================
-# 3. UI 화면 구성 (레이아웃 수정)
+# 3. UI 화면 구성
 # =================================================
 st.set_page_config(page_title="진주햄 뉴스 클리핑", layout="wide")
 
-st.title("🗞️ 주간 뉴스 클리핑 시스템")
-start_d, end_d = get_fixed_date_range()
-st.info(f"📅 수집 대상 기간: **{start_d} (금) ~ {end_d} (목)**")
+# 상단 타이틀 및 날짜 레이아웃
+head_col1, head_col2 = st.columns([2, 1])
+with head_col1:
+    st.title("🗞️ 주간 뉴스 클리핑 시스템")
+with head_col2:
+    start_d, end_d = get_fixed_date_range()
+    st.write("") # 간격 조절
+    st.write(f"📅 **수집 기간:** {start_d} ~ {end_d}")
 
-# --- 메인 설정 영역 (Tabs 사용) ---
-tab1, tab2 = st.tabs(["📝 키워드 관리", "🔍 수집 설정 및 실행"])
+st.divider()
 
-with tab1:
-    st.subheader("키워드 대분류/소분류 관리")
+# --- 1. 수집 설정 및 실행 (타이틀 하단 배치) ---
+st.subheader("🔍 수집 설정 및 실행")
+col_f1, col_f2 = st.columns([3, 1])
+with col_f1:
+    min_score = st.slider("업무 연관도 필터 (최소 점수)", 0, 10, 3, help="점수가 높을수록 키워드가 많이 포함된 기사입니다.")
+with col_f2:
+    st.write("") # 간격 조절
+    if st.button("🌟 뉴스 수집 시작", type="primary", use_container_width=True):
+        with st.spinner('뉴스를 수집 중입니다...'):
+            st.session_state.news_results = collect_news_enhanced(st.session_state.keyword_mapping, start_d, end_d)
+            st.session_state.cart = pd.DataFrame()
+            st.rerun()
+
+# --- 2. 키워드 관리 (항상 접혀있는 상태) ---
+with st.expander("🛠️ 뉴스클리핑 키워드 관리", expanded=False):
     c1, c2 = st.columns(2)
     with c1:
         new_g = st.text_input("새 대분류 추가", placeholder="예: 경쟁사")
@@ -156,9 +166,7 @@ with tab1:
                     st.session_state.keyword_mapping[sel_g].append(new_s)
                     save_keywords(st.session_state.keyword_mapping)
                     st.rerun()
-    
     st.divider()
-    # 현재 키워드 리스트 출력
     for g, subs in list(st.session_state.keyword_mapping.items()):
         col_g, col_s = st.columns([1, 4])
         with col_g:
@@ -169,22 +177,9 @@ with tab1:
         with col_s:
             st.write(f"**{g}**: {', '.join(subs)}")
 
-with tab2:
-    st.subheader("검색 필터 및 실행")
-    col_f1, col_f2 = st.columns([3, 1])
-    with col_f1:
-        min_score = st.slider("업무 연관도 필터 (최소 점수)", 0, 10, 3, help="점수가 높을수록 키워드가 많이 포함된 기사입니다.")
-    with col_f2:
-        st.write("") # 간격 맞춤용
-        if st.button("🌟 뉴스 수집 시작", type="primary", use_container_width=True):
-            with st.spinner('뉴스를 수집 중입니다...'):
-                st.session_state.news_results = collect_news_enhanced(st.session_state.keyword_mapping, start_d, end_d)
-                st.session_state.cart = pd.DataFrame()
-                st.rerun()
-
 st.divider()
 
-# --- 결과 출력 영역 ---
+# --- 3. 결과 출력 영역 ---
 col_list, col_cart = st.columns([1.2, 0.8])
 
 with col_list:
@@ -201,14 +196,12 @@ with col_list:
     elif st.session_state.news_results:
         st.warning(f"{min_score}점 이상인 기사가 없습니다. 필터를 낮춰보세요.")
     else:
-        st.info("수집 설정 탭에서 버튼을 눌러 뉴스 수집을 시작하세요.")
+        st.info("수집 시작 버튼을 눌러주세요.")
 
 with col_cart:
     st.subheader("🛒 추출 바구니")
     if not st.session_state.cart.empty:
         st.dataframe(st.session_state.cart[["그룹", "출처", "제목"]], use_container_width=True, hide_index=True)
-        
-        # [수정] 엑셀 파일명 변경: 진주햄 뉴스클리핑 (날짜)
         file_date = end_d.strftime("%Y%m%d")
         excel_data = to_excel(st.session_state.cart)
         st.download_button(
