@@ -31,6 +31,7 @@ def save_keywords(mapping):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(mapping, f, ensure_ascii=False, indent=4)
 
+# 세션 상태 초기화
 if "keyword_mapping" not in st.session_state:
     st.session_state.keyword_mapping = load_keywords()
 if "news_results" not in st.session_state:
@@ -121,18 +122,18 @@ def to_excel(data_list):
     return output.getvalue()
 
 # =================================================
-# 3. UI/UX 구성 및 바구니 로직 수정
+# 3. UI/UX 구성 및 바구니 동기화 로직
 # =================================================
 st.set_page_config(page_title="진주햄 뉴스 클리핑 시스템", layout="wide")
 
-# [핵심 수정] 체크박스 클릭 시 즉시 바구니를 업데이트하는 함수
-def toggle_cart(item, key):
-    if st.session_state[key]:
-        if item not in st.session_state.cart_list:
+# [수정된 로직] 기사의 링크(URL)를 기준으로 바구니 담기 기능을 처리합니다.
+def toggle_cart_item(item, key):
+    current_cart_links = [c['링크'] for c in st.session_state.cart_list]
+    if st.session_state[key]: # 체크됨
+        if item['링크'] not in current_cart_links:
             st.session_state.cart_list.append(item)
-    else:
-        if item in st.session_state.cart_list:
-            st.session_state.cart_list.remove(item)
+    else: # 체크 해제됨
+        st.session_state.cart_list = [c for c in st.session_state.cart_list if c['링크'] != item['링크']]
 
 def add_group():
     new_g = st.session_state.new_group_input.strip()
@@ -158,7 +159,7 @@ with st.sidebar:
     if st.button("🌟 뉴스 수집 시작", type="primary", use_container_width=True):
         with st.spinner('뉴스를 검색 중입니다...'):
             st.session_state.news_results = collect_news_final(st.session_state.keyword_mapping, start_d, end_d)
-            st.session_state.cart_list = []
+            st.session_state.cart_list = [] # 수집 시 바구니 초기화
             st.rerun()
 
     st.divider()
@@ -197,6 +198,9 @@ with col_main:
     all_categories = ["전체"] + list(st.session_state.keyword_mapping.keys())
     tabs = st.tabs(all_categories)
     
+    # 바구니에 담긴 링크 목록 추출 (비교용)
+    cart_links = [item['링크'] for item in st.session_state.cart_list]
+    
     for i, tab in enumerate(tabs):
         with tab:
             current_cat = all_categories[i]
@@ -207,15 +211,16 @@ with col_main:
             if filtered_res:
                 st.caption(f"검색 결과: {len(filtered_res)}건")
                 for idx, item in enumerate(filtered_res):
-                    # [핵심 수정] 체크박스 상태 관리를 위해 고유 키와 on_change 함수 부여
+                    # 고유 키 생성
                     cb_key = f"cb_{item['링크']}_{st.session_state.reset_key}"
                     
                     col_check, col_content = st.columns([0.05, 0.95])
                     with col_check:
+                        # value 값을 링크 존재 여부로 판단하여 체크 상태 동기화
                         st.checkbox("", 
                                     key=cb_key, 
-                                    value=(item in st.session_state.cart_list), 
-                                    on_change=toggle_cart, 
+                                    value=(item['링크'] in cart_links),
+                                    on_change=toggle_cart_item,
                                     args=(item, cb_key))
                     
                     with col_content:
@@ -228,7 +233,6 @@ with col_main:
 with col_cart:
     st.subheader("🛒 추출 바구니")
     if st.session_state.cart_list:
-        # 바구니 목록 표시
         cart_df = pd.DataFrame(st.session_state.cart_list)
         st.dataframe(cart_df[["키워드", "출처", "제목"]], use_container_width=True, hide_index=True)
         
