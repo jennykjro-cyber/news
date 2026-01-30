@@ -190,32 +190,29 @@ with st.sidebar:
         st.text_input(f"➕ '{sel_g}'에 키워드 쏙 넣기", key="new_sub_input", on_change=add_sub, args=(sel_g,), placeholder="입력 후 엔터!")
 
 # 기존 코드를 아래 코드로 대체하세요
-with st.expander("📋 등록된 키워드 리스트 (펼치기)", expanded=True):
-    with st.container(height=350, border=False):
-        if not st.session_state.keyword_mapping:
-            st.caption("등록된 키워드가 없습니다.")
-        for g, subs in list(st.session_state.keyword_mapping.items()):
-            # [수정] 대분류 레이아웃: 제목 옆에 아주 작은 삭제 버튼 배치
-            c_title, c_del = st.columns([0.85, 0.15])
-            c_title.markdown(f"**{g}**")
+    with st.expander("📋 등록된 키워드 리스트 (펼치기)", expanded=True):
+        # height를 지정한 container가 있으면 내부에서 스크롤이 생깁니다.
+        with st.container(height=350, border=False):
+            if not st.session_state.keyword_mapping:
+                st.caption("등록된 키워드가 없습니다.")
             
-            # 소형 버튼 스타일 적용 (label을 작게 표시)
-            if c_del.button("삭제", key=f"del_group_{g}", help=f"{g} 분류 삭제"):
-                del st.session_state.keyword_mapping[g]
-                save_keywords(st.session_state.keyword_mapping)
-                st.rerun()
+            for g, subs in list(st.session_state.keyword_mapping.items()):
+                # 대분류 레이아웃
+                c_title, c_del = st.columns([0.8, 0.2])
+                c_title.markdown(f"**{g}**")
+                
+                # 대분류 삭제 버튼 (작게)
+                if c_del.button("삭제", key=f"del_g_{g}", help=f"{g} 전체 삭제"):
+                    del st.session_state.keyword_mapping[g]
+                    save_keywords(st.session_state.keyword_mapping)
+                    st.rerun()
 
-            # [수정] 키워드 개별 삭제 버튼 구현 (버튼 형식으로 나열)
-            cols = st.columns(3) # 한 줄에 3개씩 키워드 배치
-            for idx, s in enumerate(subs):
-                with cols[idx % 3]:
-                    # 키워드 옆에 작은 'x'가 붙은 버튼 생성
-                    if st.button(f"{s} ×", key=f"del_kw_{g}_{s}", use_container_width=True):
-                        st.session_state.keyword_mapping[g].remove(s)
-                        save_keywords(st.session_state.keyword_mapping)
-                        st.rerun()
-            st.markdown("---")
-
+                # 키워드 개별 삭제 (버튼 방식)
+                # 사이드바 폭이 좁으므로 2열로 배치하거나 한 줄씩 배치
+                for s in subs:
+                    col_kw, col_kw_del = st.columns([0.85, 0.15])
+                    col_kw.markdown(f"• {s}")
+                    if col_kw_del.markdown(f'<p style="cursor:pointer;color:red;font-weight:bold;margin:0;">×</p>', unsafe_allow_html=True):
 # 메인 영역
 st.title("📰 Weekly News Clipping")
 st.caption("회사 때문에 읽는 뉴스, 대신 모아드립니다")
