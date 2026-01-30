@@ -152,81 +152,72 @@ def add_sub(group_name):
         st.session_state.keyword_mapping[group_name].append(new_s)
         save_keywords(st.session_state.keyword_mapping)
     st.session_state.new_sub_input = ""
-    
-# 1. 사이드바 메뉴 만들기
+
+# 사이드바 설정
 with st.sidebar:
     st.title("🥓 진주햄 뉴스봇")
-    # 아래 라디오 버튼을 추가하여 페이지를 나눕니다.
-    page = st.radio("📂 이동하기", ["뉴스 검색 서비스", "설정: 키워드 관리실"])
     st.write("---")
+    
+    st.subheader("⚙️ 검색 설정")
+    start_d, end_d = get_fixed_date_range()
+    
+    # 날짜 표시를 좀 더 예쁘게
+    st.info(f"📅 **어차피 이번 주 얘기만 합니다**\n\n{start_d.strftime('%m.%d')} (금) ~ {end_d.strftime('%m.%d')} (오늘)")
+    
+    min_score = st.slider("🎯 **연관도 필터** (높을수록 정확)", 0, 5, 2)
+    
+    st.write("") # 여백
+    # [요청사항 반영] 위트 있는 문구와 이모티콘 추가
+    if st.button("🗂 이번 주 어쩔 수 없는 뉴스 수집", type="primary", use_container_width=True):
+        with st.spinner('🕵️‍♀️ 불가피하게 뉴스를 수집 중입니다'):
+            st.session_state.news_results = collect_news_final(st.session_state.keyword_mapping, start_d, end_d)
+            st.session_state.cart_list = [] 
+            st.rerun()
 
-# 2. '뉴스 검색 서비스' 페이지 (기존 메인 로직 전부)
-if page == "뉴스 검색 서비스":
-    # 사이드바 설정
-    with st.sidebar:
-        st.title("🥓 진주햄 뉴스봇")
-        st.write("📰 Weekly News Clipping")
-        
-        st.subheader("⚙️ 검색 설정")
-        start_d, end_d = get_fixed_date_range()
-        
-        # 날짜 표시를 좀 더 예쁘게
-        st.info(f"📅 **어차피 이번 주 얘기만 합니다**\n\n{start_d.strftime('%m.%d')} (금) ~ {end_d.strftime('%m.%d')} (오늘)")
-        
-        min_score = st.slider("🎯 **연관도 필터** (높을수록 정확)", 0, 5, 2)
-        
-        st.write("") # 여백
-        # [요청사항 반영] 위트 있는 문구와 이모티콘 추가
-        if st.button("🗂 이번 주 어쩔 수 없는 뉴스 수집", type="primary", use_container_width=True):
-            with st.spinner('🕵️‍♀️ 불가피하게 뉴스를 수집 중입니다'):
-                st.session_state.news_results = collect_news_final(st.session_state.keyword_mapping, start_d, end_d)
-                st.session_state.cart_list = [] 
-                st.rerun()
+    st.divider()
     
-        st.divider()
-        
-        st.subheader("📝 키워드 관리실")
-        
-        # 2단 컬럼 배치 (가로형)
-        col1, col2 = st.columns(2)
-        with col1:
-            st.text_input("대분류", key="new_group_input", on_change=add_group, placeholder="분류명")
-        with col2:
-            keys = list(st.session_state.keyword_mapping.keys())
-            sel_g = st.selectbox("선택", options=keys, label_visibility="visible") if keys else st.selectbox("없음", ["-"])
+    st.subheader("📝 키워드 관리실")
     
-        if keys:
-            st.text_input(f"➕ '{sel_g}'에 키워드 쏙 넣기", key="new_sub_input", on_change=add_sub, args=(sel_g,), placeholder="입력 후 엔터!")
-    
-    # 기존 코드를 아래 코드로 대체하세요
-        with st.expander("📋 등록된 키워드 리스트 (펼치기)", expanded=True):
-            # height를 지정한 container가 있으면 내부에서 스크롤이 생깁니다.
-            with st.container(height=350, border=False):
-                if not st.session_state.keyword_mapping:
-                    st.caption("등록된 키워드가 없습니다.")
+    # 2단 컬럼 배치 (가로형)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.text_input("대분류", key="new_group_input", on_change=add_group, placeholder="분류명")
+    with col2:
+        keys = list(st.session_state.keyword_mapping.keys())
+        sel_g = st.selectbox("선택", options=keys, label_visibility="visible") if keys else st.selectbox("없음", ["-"])
+
+    if keys:
+        st.text_input(f"➕ '{sel_g}'에 키워드 쏙 넣기", key="new_sub_input", on_change=add_sub, args=(sel_g,), placeholder="입력 후 엔터!")
+
+# 기존 코드를 아래 코드로 대체하세요
+    with st.expander("📋 등록된 키워드 리스트 (펼치기)", expanded=True):
+        # height를 지정한 container가 있으면 내부에서 스크롤이 생깁니다.
+        with st.container(height=350, border=False):
+            if not st.session_state.keyword_mapping:
+                st.caption("등록된 키워드가 없습니다.")
+            
+            for g, subs in list(st.session_state.keyword_mapping.items()):
+                # 1. 대분류 레이아웃 (제목과 작은 삭제 버튼)
+                c_title, c_del = st.columns([0.8, 0.2])
+                c_title.markdown(f"**{g}**")
                 
-                for g, subs in list(st.session_state.keyword_mapping.items()):
-                    # 1. 대분류 레이아웃 (제목과 작은 삭제 버튼)
-                    c_title, c_del = st.columns([0.8, 0.2])
-                    c_title.markdown(f"**{g}**")
-                    
-                    # 대분류 삭제 버튼을 텍스트 크기에 맞춰 작게
-                    if c_del.button("삭제", key=f"del_g_{g}", help=f"{g} 전체 삭제"):
-                        del st.session_state.keyword_mapping[g]
-                        save_keywords(st.session_state.keyword_mapping)
-                        st.rerun()
-    
-                    # 2. 키워드 개별 삭제 (가로로 여러 개 배치)
-                    # 한 줄에 키워드를 담을 빈 공간(container) 생성
-                    kw_cols = st.columns(2) # 한 줄에 2~3개가 적당합니다.
-                    for idx, s in enumerate(subs):
-                        with kw_cols[idx % 2]: # 2개 컬럼을 번갈아가며 사용
-                            # 키워드와 X를 합친 작은 버튼 생성
-                            if st.button(f"{s} ×", key=f"del_kw_{g}_{s}", use_container_width=True):
-                                st.session_state.keyword_mapping[g].remove(s)
-                                save_keywords(st.session_state.keyword_mapping)
-                                st.rerun()
-                    st.markdown("---")
+                # 대분류 삭제 버튼을 텍스트 크기에 맞춰 작게
+                if c_del.button("삭제", key=f"del_g_{g}", help=f"{g} 전체 삭제"):
+                    del st.session_state.keyword_mapping[g]
+                    save_keywords(st.session_state.keyword_mapping)
+                    st.rerun()
+
+                # 2. 키워드 개별 삭제 (가로로 여러 개 배치)
+                # 한 줄에 키워드를 담을 빈 공간(container) 생성
+                kw_cols = st.columns(2) # 한 줄에 2~3개가 적당합니다.
+                for idx, s in enumerate(subs):
+                    with kw_cols[idx % 2]: # 2개 컬럼을 번갈아가며 사용
+                        # 키워드와 X를 합친 작은 버튼 생성
+                        if st.button(f"{s} ×", key=f"del_kw_{g}_{s}", use_container_width=True):
+                            st.session_state.keyword_mapping[g].remove(s)
+                            save_keywords(st.session_state.keyword_mapping)
+                            st.rerun()
+                st.markdown("---")
                         
 # 메인 영역
 st.title("📰 Weekly News Clipping")
