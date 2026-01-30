@@ -212,7 +212,10 @@ with st.sidebar:
                 for s in subs:
                     col_kw, col_kw_del = st.columns([0.85, 0.15])
                     col_kw.markdown(f"• {s}")
-                    if col_kw_del.markdown(f'<p style="cursor:pointer;color:red;font-weight:bold;margin:0;">×</p>', unsafe_allow_html=True):
+                    if st.button(f"{s} 삭제", key=f"del_kw_{g}_{s}", size="small", use_container_width=True):
+                        st.session_state.keyword_mapping[g].remove(s)
+                        save_keywords(st.session_state.keyword_mapping)
+                        st.rerun()
                         st.markdown("---")
                         
 # 메인 영역
