@@ -176,7 +176,7 @@ with st.sidebar:
 
     st.divider()
     
-    with st.expander("📝 대분류 등록", expanded=False):
+    with st.expander("📝 분류", expanded=False):
     
     # 2단 컬럼 배치 (가로형)
         col1, col2 = st.columns(2)
@@ -190,7 +190,7 @@ with st.sidebar:
         st.markdown("---")
 
 # 기존 코드를 아래 코드로 대체하세요
-    with st.expander("📋 키워드 리스트)", expanded=False):
+    with st.expander("📋 키워드 리스트", expanded=False):
         # height를 지정한 container가 있으면 내부에서 스크롤이 생깁니다.
         with st.container(height=350, border=False):
             if not st.session_state.keyword_mapping:
