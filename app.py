@@ -189,22 +189,32 @@ with st.sidebar:
     if keys:
         st.text_input(f"➕ '{sel_g}'에 키워드 쏙 넣기", key="new_sub_input", on_change=add_sub, args=(sel_g,), placeholder="입력 후 엔터!")
 
-    # 스크롤 박스 (높이 고정)
-    with st.expander("📋 등록된 키워드 리스트 (펼치기)", expanded=True):
-        with st.container(height=350, border=False):
-            if not st.session_state.keyword_mapping:
-                st.caption("등록된 키워드가 없습니다.")
-            for g, subs in list(st.session_state.keyword_mapping.items()):
-                c_del, c_title = st.columns([0.15, 0.85])
-                if c_del.button("🗑️", key=f"del_{g}"):
-                    del st.session_state.keyword_mapping[g]
-                    save_keywords(st.session_state.keyword_mapping)
-                    st.rerun()
-                c_title.markdown(f"**{g}**")
-                # 태그 느낌으로 표시
-                tags = [f"`{s}`" for s in subs]
-                c_title.markdown(" ".join(tags))
-                st.markdown("---")
+# 기존 코드를 아래 코드로 대체하세요
+with st.expander("📋 등록된 키워드 리스트 (펼치기)", expanded=True):
+    with st.container(height=350, border=False):
+        if not st.session_state.keyword_mapping:
+            st.caption("등록된 키워드가 없습니다.")
+        for g, subs in list(st.session_state.keyword_mapping.items()):
+            # [수정] 대분류 레이아웃: 제목 옆에 아주 작은 삭제 버튼 배치
+            c_title, c_del = st.columns([0.85, 0.15])
+            c_title.markdown(f"**{g}**")
+            
+            # 소형 버튼 스타일 적용 (label을 작게 표시)
+            if c_del.button("삭제", key=f"del_group_{g}", help=f"{g} 분류 삭제"):
+                del st.session_state.keyword_mapping[g]
+                save_keywords(st.session_state.keyword_mapping)
+                st.rerun()
+
+            # [수정] 키워드 개별 삭제 버튼 구현 (버튼 형식으로 나열)
+            cols = st.columns(3) # 한 줄에 3개씩 키워드 배치
+            for idx, s in enumerate(subs):
+                with cols[idx % 3]:
+                    # 키워드 옆에 작은 'x'가 붙은 버튼 생성
+                    if st.button(f"{s} ×", key=f"del_kw_{g}_{s}", use_container_width=True):
+                        st.session_state.keyword_mapping[g].remove(s)
+                        save_keywords(st.session_state.keyword_mapping)
+                        st.rerun()
+            st.markdown("---")
 
 # 메인 영역
 st.title("📰 Weekly News Clipping")
