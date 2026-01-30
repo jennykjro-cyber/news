@@ -7,7 +7,7 @@ import json
 import os
 
 # =================================================
-# 1. 시스템 초기 설정 및 데이터 로드 (기존 유지)
+# 1. 시스템 초기 설정 및 데이터 로드
 # =================================================
 DB_FILE = "keywords_db.json"
 
@@ -41,7 +41,7 @@ if "reset_key" not in st.session_state:
     st.session_state.reset_key = 0
 
 # =================================================
-# 2. 핵심 로직 고도화 (검색 쿼리 확장)
+# 2. 핵심 로직 고도화 (폭넓은 검색 쿼리)
 # =================================================
 def get_fixed_date_range():
     today = datetime.today()
@@ -66,19 +66,17 @@ def get_relevance_score(title, desc, all_keywords):
     return score
 
 def collect_news_final(mapping, start_date, end_date):
-    # 검색 결과 수를 늘려 더 폭넓게 수집
-    google_news = GNews(language="ko", country="KR", max_results=30)
+    google_news = GNews(language="ko", country="KR", max_results=20)
     all_rows = []
     all_search_kws = [kw for sublist in mapping.values() for kw in sublist]
-    exclude_keywords = ["출시", "런칭", "신제품", "이벤트", "증정", "할인행사", "포토존", "팝업스토어", "증시", "주가"]
+    exclude_keywords = ["출시", "런칭", "신제품", "이벤트", "증정", "할인행사", "포토존", "팝업스토어", "증시", "주가", "상한가"]
     
     progress_bar = st.progress(0)
     groups = list(mapping.items())
     
     for i, (group, sub_kws) in enumerate(groups):
         if not sub_kws: continue
-        
-        # [고도화] 단어 하나가 아니라 "그룹명 (키워드1 OR 키워드2)" 형태로 쿼리 조합
+        # 폭넓은 수집을 위한 OR 쿼리 조합
         search_query = f"{group} ({' OR '.join(sub_kws)})"
         articles = google_news.get_news(search_query)
         
@@ -103,6 +101,7 @@ def collect_news_final(mapping, start_date, end_date):
         progress_bar.progress((i + 1) / len(groups))
     
     unique_rows = {r['링크']: r for r in all_rows}.values()
+    # 점수 높은 순 정렬
     return sorted(list(unique_rows), key=lambda x: x['연관도점수'], reverse=True)
 
 def to_excel(data_list):
@@ -120,94 +119,109 @@ def to_excel(data_list):
     return output.getvalue()
 
 # =================================================
-# 3. UI/UX 개선 (사이드바 및 탭 구조)
+# 3. UI/UX 개선: 원페이지 & 사이드바 대시보드
 # =================================================
-st.set_page_config(page_title="진주햄 뉴스 클리핑", layout="wide")
+st.set_page_config(page_title="진주햄 뉴스 클리핑 시스템", layout="wide")
 
-# 사이드바: 설정 및 키워드 관리
+# 사이드바: 모든 설정과 키워드 관리를 몰아넣음
 with st.sidebar:
-    st.title("⚙️ 시스템 설정")
+    st.header("⚙️ 검색 및 관리")
     start_d, end_d = get_fixed_date_range()
-    st.info(f"🗓️ **대상 기간**\n{start_d} ~ {end_d}")
+    st.caption(f"수집 기간: {start_d} ~ {end_d}")
     
-    st.divider()
-    min_score = st.slider("🎯 업무 연관도 최소 점수", 0, 10, 3)
+    min_score = st.slider("🎯 연관도 필터 점수", 0, 10, 3)
     
     if st.button("🌟 뉴스 수집 시작", type="primary", use_container_width=True):
-        with st.spinner('뉴스를 수집 중...'):
+        with st.spinner('뉴스를 검색 중입니다...'):
             st.session_state.news_results = collect_news_final(st.session_state.keyword_mapping, start_d, end_d)
             st.session_state.cart_list = []
             st.rerun()
-            
+
     st.divider()
-    with st.expander("🛠️ 키워드 관리"):
+    
+    # 키워드 관리 (항상 접혀있도록 설정)
+    with st.expander("🛠️ 키워드 관리 (닫힘)", expanded=False):
+        # 대분류 추가
         new_g = st.text_input("새 대분류 추가")
-        if st.button("대분류 추가"):
+        if st.button("대분류 추가", use_container_width=True):
             if new_g and new_g not in st.session_state.keyword_mapping:
                 st.session_state.keyword_mapping[new_g] = []
                 save_keywords(st.session_state.keyword_mapping)
                 st.rerun()
         
+        # 소분류 추가
         keys = list(st.session_state.keyword_mapping.keys())
         if keys:
+            st.divider()
             sel_g = st.selectbox("대분류 선택", options=keys)
-            new_s = st.text_input(f"'{sel_g}' 키워드 추가")
-            if st.button("소분류 추가"):
+            new_s = st.text_input(f"키워드 추가 ({sel_g})")
+            if st.button("소분류 추가", use_container_width=True):
                 if new_s and new_s not in st.session_state.keyword_mapping[sel_g]:
                     st.session_state.keyword_mapping[sel_g].append(new_s)
                     save_keywords(st.session_state.keyword_mapping)
                     st.rerun()
-        
-        for g, subs in list(st.session_state.keyword_mapping.items()):
-            if st.button(f"🗑️ {g} 삭제", key=f"del_{g}"):
-                del st.session_state.keyword_mapping[g]
-                save_keywords(st.session_state.keyword_mapping)
-                st.rerun()
+            
+            st.divider()
+            # 삭제 및 리스트 확인
+            for g, subs in list(st.session_state.keyword_mapping.items()):
+                col_del, col_name = st.columns([0.3, 0.7])
+                if col_del.button("🗑️", key=f"del_{g}"):
+                    del st.session_state.keyword_mapping[g]
+                    save_keywords(st.session_state.keyword_mapping)
+                    st.rerun()
+                col_name.write(f"**{g}**")
+                st.caption(f"({', '.join(subs)})")
 
-# 메인 화면 영역
-col_main, col_cart = st.columns([1.2, 0.8])
+# 메인 화면: 두 칼럼 구조 (리스트 / 장바구니)
+st.title("🗞️ 주간 뉴스 클리핑 시스템")
+st.markdown("수집된 뉴스를 확인하고 엑셀에 포함할 기사를 선택하세요.")
+st.divider()
+
+col_main, col_cart = st.columns([1.3, 0.7])
 
 with col_main:
-    st.subheader("📌 수집 뉴스 리스트")
+    st.subheader("📌 뉴스 검색 결과 (전체)")
     
-    # 탭 생성: 전체 + 각 그룹별
-    tab_names = ["전체"] + list(st.session_state.keyword_mapping.keys())
-    tabs = st.tabs(tab_names)
+    # 필터링 적용
+    filtered_res = [r for r in st.session_state.news_results if r.get('연관도점수', 0) >= min_score]
     
-    for i, tab in enumerate(tabs):
-        with tab:
-            group_filter = tab_names[i]
-            filtered_res = [r for r in st.session_state.news_results if r.get('연관도점수', 0) >= min_score]
-            if group_filter != "전체":
-                filtered_res = [r for r in filtered_res if r['그룹'] == group_filter]
-                
-            if filtered_res:
-                for idx, item in enumerate(filtered_res):
-                    cb_key = f"news_{group_filter}_{idx}_v{st.session_state.reset_key}"
-                    # 디자인 개선: 제목과 정보를 한눈에
-                    col_check, col_txt = st.columns([0.1, 0.9])
-                    with col_check:
-                        is_checked = st.checkbox("", key=cb_key, value=item in st.session_state.cart_list)
-                        if is_checked and item not in st.session_state.cart_list:
-                            st.session_state.cart_list.append(item)
-                        elif not is_checked and item in st.session_state.cart_list:
-                            st.session_state.cart_list.remove(item)
-                    with col_txt:
-                        st.markdown(f"**{item['제목']}**")
-                        st.caption(f"{item['출처']} | {item['기사일자']} | 점수: {item['연관도점수']} | [링크]({item['링크']})")
-                    st.divider()
-            else:
-                st.info("해당하는 뉴스가 없습니다.")
+    if filtered_res:
+        st.caption(f"총 {len(filtered_res)}건의 기사가 검색되었습니다.")
+        for idx, item in enumerate(filtered_res):
+            cb_key = f"news_{idx}_v{st.session_state.reset_key}"
+            
+            # 한 줄에 체크박스 + [그룹] + 제목 + 메타정보 노출
+            col_check, col_content = st.columns([0.05, 0.95])
+            with col_check:
+                # 선택 상태 유지 로직
+                is_checked = st.checkbox("", key=cb_key, value=item in st.session_state.cart_list)
+                if is_checked and item not in st.session_state.cart_list:
+                    st.session_state.cart_list.append(item)
+                elif not is_checked and item in st.session_state.cart_list:
+                    st.session_state.cart_list.remove(item)
+            
+            with col_content:
+                # 그룹명을 강조하여 가독성 높임
+                st.markdown(f"**[{item['그룹']}]** {item['제목']}")
+                st.caption(f"{item['출처']} | {item['기사일자']} | 연관도: {item['연관도점수']}점 | [기사원문]({item['링크']})")
+            
+            st.write("") # 간격 조절
+    else:
+        st.info("왼쪽 사이드바에서 '뉴스 수집 시작'을 눌러주세요.")
 
 with col_cart:
     st.subheader("🛒 추출 바구니")
     if st.session_state.cart_list:
+        # 바구니 미리보기 테이블
         cart_df = pd.DataFrame(st.session_state.cart_list)
         st.dataframe(cart_df[["그룹", "출처", "제목"]], use_container_width=True, hide_index=True)
         
-        file_name = f"진주햄_뉴스클리핑_{datetime.now().strftime('%Y%m%d')}.xlsx"
+        st.write(f"현재 **{len(st.session_state.cart_list)}**개 선택됨")
+        
+        # 다운로드 및 초기화 버튼
+        file_name = f"진주햄_뉴스클리핑_{end_d.strftime('%Y%m%d')}.xlsx"
         st.download_button(
-            label="📥 선택 기사 엑셀 다운로드",
+            label="📥 엑셀 파일 다운로드",
             data=to_excel(st.session_state.cart_list),
             file_name=file_name,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -220,4 +234,4 @@ with col_cart:
             st.session_state.cart_list = []
             st.rerun()
     else:
-        st.write("선택된 기사가 없습니다. 왼쪽 리스트에서 체크해주세요.")
+        st.info("선택된 기사가 없습니다.\n왼쪽 리스트에서 체크박스를 선택하세요.")
