@@ -227,6 +227,23 @@ with st.sidebar:
                             save_keywords(st.session_state.keyword_mapping)
                             st.rerun()
                 st.markdown("---")
+
+# --- 사이드바 최하단에 추가할 점수 매커니즘 설명 ---
+                st.divider()
+                with st.expander("💡 연관도 점수 산출 방식", expanded=False):
+                    st.markdown("""
+                    **1. 점수 부여 규칙**
+                    * **제목**에 키워드 포함: **+2점**
+                    * **요약문**에 키워드 포함: **+1점**
+                    
+                    **2. 필터링 원리**
+                    * 위 슬라이더에서 설정한 점수 이상의 기사만 결과에 노출됩니다.
+                    * 점수가 높은 기사일수록 상단에 정렬됩니다.
+                    
+                    **3. 정확도 향상**
+                    * 검색 시 공백을 제거하고 비교하여 띄어쓰기 오차를 최소화합니다.
+                    * 광고/증시 등 불필요한 키워드는 자동으로 제외됩니다.
+                    """)
                         
 # 메인 영역
 st.title("📰 Weekly News Clipping")
