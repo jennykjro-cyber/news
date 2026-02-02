@@ -177,11 +177,11 @@ with st.sidebar:
     
     st.write("") # 여백
     # [요청사항 반영] 위트 있는 문구와 이모티콘 추가
-   if st.button("🗂 이번주 뉴스 수집", type="primary", use_container_width=True):
-            with st.spinner('🕵️‍♀️ 불가피하게 뉴스를 수집 중입니다'):
-                 st.session_state.news_results = collect_news_final(st.session_state.keyword_mapping, start_d, end_d)
-                 # st.session_state.cart_list = []  <- 이 줄을 삭제하여 새로고침(재수집) 시에도 장바구니 유지 
-                  st.rerun()
+      if st.button("🗂 이번주 뉴스 수집", type="primary", use_container_width=True):
+                with st.spinner('🕵️‍♀️ 불가피하게 뉴스를 수집 중입니다'):
+                    st.session_state.news_results = collect_news_final(st.session_state.keyword_mapping, start_d, end_d)
+                    # st.session_state.cart_list = []  <- 이 줄을 삭제하여 새로고침(재수집) 시에도 장바구니 유지 
+                    st.rerun()
 
     st.divider()
     
