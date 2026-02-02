@@ -296,20 +296,9 @@ with col_cart:
                     if st.button("×", key=f"cart_del_{idx}"):
                         st.session_state.cart_list.pop(idx)
                         st.rerun()
-
+st.divider() # 구분선 추가
             
-            # 미리보기 데이터프레임
-            cart_df = pd.DataFrame(st.session_state.cart_list)
-            st.dataframe(
-                cart_df[["키워드", "출처","날짜","제목"]], 
-                use_container_width=True, 
-                hide_index=True,
-                height=300
-            )
-            
-            st.write("")
             file_name = f"진주햄_뉴스클리핑_{end_d.strftime('%Y%m%d')}.xlsx"
-            
             st.download_button(
                 label="📥 엑셀 파일 다운로드",
                 data=to_excel(st.session_state.cart_list),
@@ -317,10 +306,10 @@ with col_cart:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
                 type="primary"
-            )
+            ) [cite: 37]
             
-            if st.button("🔄 처음부터 다시 담기", use_container_width=True):
+            if st.button("🔄 장바구니 전체 비우기", use_container_width=True):
                 st.session_state.cart_list = []
-                st.rerun()
+                st.rerun() [cite: 38]
     else:
         st.info("아직 쓸만한 게 없습니다 🍂\n\n왼쪽 리스트에서 필요한 기사를 체크하면 여기에 들어와요.")
