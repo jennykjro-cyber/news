@@ -181,6 +181,24 @@ with st.sidebar:
                             st.rerun()
                 st.markdown("---")
 
+# --- 사이드바 최하단에 추가할 점수 매커니즘 설명 ---
+    st.divider()
+    with st.expander("💡 연관도 점수 산출 방식", expanded=False):
+        st.markdown("""
+        <div style="font-size: 0.85em; line-height: 1.6; color: #666;">
+            <b>1. 연관도 점수 </b><br>
+            • 제목에 키워드가 있으면 <b>+2점</b><br>
+            • 요약문에 키워드가 있으면 <b>+1점</b><br>
+            👉 즉, 제목에 있으면 더 중요</b><br><br>
+            <b>2. 필터링 </b><br>
+            • 점수 설정시 기준 점수를 넘는 기사만 나옴<br>
+            • 점수가 높은 기사일수록 상단에 정렬<br><br>
+            * 검색 시 공백을 제거로 오차를 최소화<br>
+            * 불필요한 키워드는 자동으로 제외<br>
+        </div>
+        """, unsafe_allow_html=True)
+
+
 # 메인 영역
 st.title("📰 Weekly News Clipping")
 st.caption("회사 때문에 읽는 뉴스, 대신 모아드립니다")
