@@ -141,6 +141,38 @@ def to_excel(data_list):
 # =================================================
 st.set_page_config(page_title="진주햄 뉴스 클리핑", page_icon="🐷", layout="wide")
 
+# --- [여기서부터 삽입 시작] 기기별 자동 레이아웃 최적화 ---
+st.markdown("""
+    <style>
+    /* 1. 모바일 및 태블릿 대응 (화면 너비 1024px 이하일 때) */
+    @media screen and (max-width: 1024px) {
+        /* 가로로 배치된 메인 컬럼들을 강제로 세로로 쌓음 */
+        div[data-testid="stHorizontalBlock"] {
+            flex-direction: column !important;
+        }
+        /* 각 컬럼 너비를 100%로 확장하여 꽉 차게 만듦 */
+        div[data-testid="column"] {
+            width: 100% !important;
+            margin-left: 0 !important;
+        }
+        /* 모바일에서 뉴스 목록 컨테이너 높이가 너무 답답하지 않게 조절 */
+        .stElementContainer div[data-testid="stVerticalBlock"] > div[style*="height: 550px"] {
+            height: 450px !important; 
+        }
+    }
+    
+    /* 2. PC 환경 (1025px 이상) */
+    @media screen and (min-width: 1025px) {
+        /* 기존의 가로 배치를 그대로 유지 */
+        div[data-testid="stHorizontalBlock"] {
+            flex-direction: row !important;
+        }
+    }
+    </style>
+""", unsafe_allow_html=True)
+# --- [여기까지 삽입 끝] ---
+
+
 def add_group():
     new_g = st.session_state.new_group_input.strip()
     if new_g and new_g not in st.session_state.keyword_mapping:
