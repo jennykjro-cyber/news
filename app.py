@@ -296,17 +296,17 @@ with col_cart:
                     if st.button("×", key=f"cart_del_{idx}"):
                         st.session_state.cart_list.pop(idx)
                         st.rerun()
+                        
             st.divider() # 구분선 추가
             
             file_name = f"진주햄_뉴스클리핑_{end_d.strftime('%Y%m%d')}.xlsx"
+        
             st.download_button(
-            label="📥 엑셀 파일 다운로드",
-            data=to_excel(st.session_state.cart_list),
-            file_name=file_name,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-            type="primary"
-            ) [cite: 37]
+                label="📥 엑셀 파일 다운로드",
+                data=to_excel(st.session_state.cart_list),
+                [cite: 37]file_name=file_name,mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",use_container_width=True,
+                type="primary"
+            ) 
             
             if st.button("🔄 장바구니 전체 비우기", use_container_width=True):
                 st.session_state.cart_list = []
