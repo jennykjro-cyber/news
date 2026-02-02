@@ -304,7 +304,8 @@ with col_cart:
             st.download_button(
                 label="📥 엑셀 파일 다운로드",
                 data=to_excel(st.session_state.cart_list),
-                [cite: 37]file_name=file_name,mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",use_container_width=True,
+                [cite: 37]file_name=file_name,mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
                 type="primary"
             ) 
             
