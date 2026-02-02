@@ -285,11 +285,23 @@ with col_cart:
     if st.session_state.cart_list:
         with st.container(border=True):
             st.markdown(f"**현재 {len(st.session_state.cart_list)}개 보관 중. 줄어들 예정**")
+
+            # [수정] 장바구니 개별 삭제 기능 추가
+            for idx, item in enumerate(st.session_state.cart_list):
+                c_del_txt, c_del_btn = st.columns([0.85, 0.15])
+                with c_del_txt:
+                    st.caption(f"[{item['키워드']}] {item['제목'][:20]}...") 
+                with c_del_btn:
+                    # 'X' 버튼 클릭 시 해당 항목 삭제
+                    if st.button("×", key=f"cart_del_{idx}"):
+                        st.session_state.cart_list.pop(idx)
+                        st.rerun()
+
             
             # 미리보기 데이터프레임
             cart_df = pd.DataFrame(st.session_state.cart_list)
             st.dataframe(
-                cart_df[["키워드", "제목"]], 
+                cart_df[["키워드", "출처","날짜","제목"]], 
                 use_container_width=True, 
                 hide_index=True,
                 height=300
