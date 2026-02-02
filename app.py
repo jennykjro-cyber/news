@@ -296,7 +296,7 @@ with col_cart:
                     if st.button("×", key=f"cart_del_{idx}"):
                         st.session_state.cart_list.pop(idx)
                         st.rerun()
-st.divider() # 구분선 추가
+            st.divider() # 구분선 추가
             
             file_name = f"진주햄_뉴스클리핑_{end_d.strftime('%Y%m%d')}.xlsx"
             st.download_button(
