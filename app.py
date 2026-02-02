@@ -170,13 +170,12 @@ with st.sidebar:
     st.subheader("⚙️ 검색 설정")
     start_d, end_d = get_fixed_date_range()
     
-    # 날짜 표시를 좀 더 예쁘게
-    st.info(f"📅 **지난주 금요일부터 오늘까지만 보여드립니다**\n\n{start_d.strftime('%m.%d')} (금) ~ {end_d.strftime('%m.%d')} (오늘)")
+    
+    st.info(f"📅 **지난주 금요일부터 오늘까지 검색**\n\n{start_d.strftime('%m.%d')} (금) ~ {end_d.strftime('%m.%d')} (오늘)")
     
     min_score = st.slider("🎯 **연관도 필터** (2추천)", 0, 5, 2)
     
     st.write("") # 여백
-    # [요청사항 반영] 위트 있는 문구와 이모티콘 추가
     if st.button("🗂 이번주 뉴스 수집", type="primary", use_container_width=True):
         with st.spinner('🕵️‍♀️ 불가피하게 뉴스를 수집 중입니다'):
             st.session_state.news_results = collect_news_final(st.session_state.keyword_mapping, start_d, end_d)
@@ -198,7 +197,7 @@ with st.sidebar:
             st.text_input(f"➕ '{sel_g}'에 키워드 쏙 넣기", key="new_sub_input", on_change=add_sub, args=(sel_g,), placeholder="입력 후 엔터!")
         st.markdown("---")
 
-# 기존 코드를 아래 코드로 대체하세요
+
     with st.expander("📋 키워드 리스트", expanded=False):
         # height를 지정한 container가 있으면 내부에서 스크롤이 생깁니다.
         with st.container(height=350, border=False):
