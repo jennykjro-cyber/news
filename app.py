@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from io import BytesIO
 import json
 import os
+from difflib import SequenceMatcher
 
 # =================================================
 # 1. 시스템 초기 설정 및 데이터 로드
@@ -95,9 +96,27 @@ def collect_news_final(mapping, start_date, end_date):
                 "연관도점수": score
             })
         progress_bar.progress((i + 1) / len(groups))
+        
+    # 1. 링크(URL) 기준 1차 중복 제거
+    unique_dict = {r['링크']: r for r in all_rows}
+    # 2. 연관도 점수가 높은 순으로 먼저 정렬 (가장 중요한 기사를 필터링 기준으로 삼기 위함)
+    sorted_rows = sorted(list(unique_dict.values()), key=lambda x: x['연관도점수'], reverse=True)
     
-    unique_rows = {r['링크']: r for r in all_rows}.values()
-    return sorted(list(unique_rows), key=lambda x: x['연관도점수'], reverse=True)
+    # 3. 제목 유사도 50% 이상 기사 필터링
+    final_filtered = []
+    for current in sorted_rows:
+        is_duplicate = False
+        for existing in final_filtered:
+            # 제목 간의 유사도 계산 (0.0 ~ 1.0)
+            similarity = SequenceMatcher(None, current['제목'], existing['제목']).ratio()
+            if similarity >= 0.5:  # 50% 이상 유사하면 중복으로 판단
+                is_duplicate = True
+                break
+        if not is_duplicate:
+            final_filtered.append(current)
+            
+    return final_filtered
+    
 
 def to_excel(data_list):
     df = pd.DataFrame(data_list)
