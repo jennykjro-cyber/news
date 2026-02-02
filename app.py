@@ -233,7 +233,7 @@ st.title("📰 Weekly News Clipping")
 st.caption("회사 때문에 읽는 뉴스, 대신 모아드립니다")
 st.write("")
 
-col_main, col_cart = st.columns([1.3, 0.7])
+col_main, col_cart = st.columns([1.2, 0.8])
 
 with col_main:
     st.subheader("🔍 검색 결과")
