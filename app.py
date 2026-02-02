@@ -284,7 +284,7 @@ with col_cart:
     
     if st.session_state.cart_list:
         with st.container(border=True):
-            st.markdown(f"**현재 {len(st.session_state.cart_list)}개 보관 중. 줄어들 예정**")
+             st.markdown(f"**현재 {len(st.session_state.cart_list)}개 보관 중. 줄어들 예정**")
 
             # [수정] 장바구니 개별 삭제 기능 추가
             for idx, item in enumerate(st.session_state.cart_list):
@@ -300,12 +300,12 @@ with col_cart:
             
             file_name = f"진주햄_뉴스클리핑_{end_d.strftime('%Y%m%d')}.xlsx"
             st.download_button(
-                label="📥 엑셀 파일 다운로드",
-                data=to_excel(st.session_state.cart_list),
-                file_name=file_name,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
-                type="primary"
+            label="📥 엑셀 파일 다운로드",
+            data=to_excel(st.session_state.cart_list),
+            file_name=file_name,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            type="primary"
             ) [cite: 37]
             
             if st.button("🔄 장바구니 전체 비우기", use_container_width=True):
