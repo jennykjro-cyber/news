@@ -54,6 +54,26 @@ def parse_news_date(date_str):
         return datetime.strptime(date_str, "%a, %d %b %Y %H:%M:%S %Z").date()
     except:
         return None
+def get_realtime_issue_pool():
+    """구글 뉴스 트렌드에서 현재 이슈가 되는 명사들을 추출하여 Pool 생성"""
+    import requests
+    from collections import Counter
+    import re
+    
+    # 1. 구글 뉴스의 '주요 뉴스' 섹션에서 현재 트렌드 제목들을 가져옴
+    issue_news = GNews(language="ko", country="KR", max_results=20)
+    top_news = issue_news.get_top_news()
+    
+    combined_titles = " ".join([n.get('title', '') for n in top_news])
+    
+    # 2. 간단한 명사 추출 (2글자 이상, 한글 위주)
+    words = re.findall(r'[가-힣]{2,}', combined_titles)
+    
+    # 3. 가장 많이 등장한 단어 상위 15개를 이슈 풀(Pool)로 반환
+    issue_counts = Counter(words)
+    issue_pool = [word for word, count in issue_counts.most_common(15)]
+    
+    return issue_pool
 
 def get_relevance_score(title, desc, all_keywords):
     score = 0
@@ -70,33 +90,45 @@ def collect_news_final(mapping, start_date, end_date):
     all_rows = []
     all_search_kws = [kw for sublist in mapping.values() for kw in sublist]
     exclude_keywords = ["출시", "런칭", "신제품", "이벤트", "증정", "할인행사", "포토존", "증시", "주가", "상한가"]
+
+    issue_pool = get_realtime_issue_pool()
+    st.info(f"🔍 오늘의 외부 이슈 트렌드 분석 완료: {', '.join(issue_pool[:5])}...")
+
+    progress_bar = st.progress(0) [cite: 5]
+    groups = list(mapping.items()) [cite: 5]
     
-    progress_bar = st.progress(0)
-    groups = list(mapping.items())
-    
-    for i, (group, sub_kws) in enumerate(groups):
-        if not sub_kws: continue
-        search_query = f"{group} ({' OR '.join(sub_kws)})"
-        articles = google_news.get_news(search_query)
+    for i, (group, sub_kws) in enumerate(groups): [cite: 5]
+        if not sub_kws: continue [cite: 5]
+        search_query = f"{group} ({' OR '.join(sub_kws)})" [cite: 5]
+        articles = google_news.get_news(search_query) [cite: 5]
         
         for a in articles:
-            title = a.get("title", "제목 없음")
-            if any(ex in title for ex in exclude_keywords): continue
-            article_date = parse_news_date(a.get("published date", ""))
-            if not article_date or not (start_date <= article_date <= end_date): continue
+            title = a.get("title", "제목 없음") [cite: 6]
+            if any(ex in title for ex in exclude_keywords): continue [cite: 6]
+            article_date = parse_news_date(a.get("published date", "")) [cite: 6]
+            if not article_date or not (start_date <= article_date <= end_date): continue [cite: 6]
             
-            desc = a.get("description", "")
-            score = get_relevance_score(title, desc, all_search_kws)
+            desc = a.get("description", "") [cite: 7]
+            # (1) 기존 방식의 연관도 점수를 계산합니다.
+            base_score = get_relevance_score(title, desc, all_search_kws) [cite: 7]
+            
+            # (2) [수정된 부분] 외부 이슈 풀 단어가 포함되면 가중치(+2.0)를 더합니다.
+            issue_weight = 0
+            for issue_word in issue_pool:
+                if issue_word in title:
+                    issue_weight += 2.0
+            
+            total_score = base_score + issue_weight # 최종 합산 점수
             
             all_rows.append({
                 "키워드": group,
-                "출처": a.get("publisher", {}).get("title", "출처 미상"),
-                "기사일자": article_date.strftime("%Y-%m-%d"),
-                "제목": title,
-                "링크": a.get("url", ""),
-                "연관도점수": score
+                "출처": a.get("publisher", {}).get("title", "출처 미상"), [cite: 7]
+                "기사일자": article_date.strftime("%Y-%m-%d"), [cite: 8]
+                "제목": title, [cite: 8]
+                "링크": a.get("url", ""), [cite: 8]
+                "연관도점수": total_score # 가중치가 반영된 점수 저장
             })
-        progress_bar.progress((i + 1) / len(groups))
+        progress_bar.progress((i + 1) / len(groups)) [cite: 8]
         
     # 1. 링크(URL) 기준 1차 중복 제거
     unique_dict = {r['링크']: r for r in all_rows}
