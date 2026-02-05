@@ -138,12 +138,18 @@ def collect_news_final(mapping, start_date, end_date):
     final_filtered = []
     for current in sorted_rows:
         is_duplicate = False
+        
+        current_title_clean = "".join(filter(str.isalnum, current['제목']))
+        
         for existing in final_filtered:
-            # 제목 간의 유사도 계산 (0.0 ~ 1.0)
-            similarity = SequenceMatcher(None, current['제목'], existing['제목']).ratio()
-            if similarity >= 0.5:  # 50% 이상 유사하면 중복으로 판단
+            existing_title_clean = "".join(filter(str.isalnum, existing['제목']))
+            # 제목 간의 유사도 계산 (기준을 0.5에서 0.35~0.4로 낮추면 더 엄격하게 걸러짐)
+            # 기준값이 낮을수록 "조금만 비슷해도 삭제"하게 됩니다.
+            similarity = SequenceMatcher(None, current_title_clean, existing_title_clean).ratio()
+            if similarity >= 0.4:  # 목이 40% 이상 유사하거나, 완전히 같은 키워드 그룹 내에서 유사할 경우 중복 처리
                 is_duplicate = True
                 break
+                
         if not is_duplicate:
             final_filtered.append(current)
             
