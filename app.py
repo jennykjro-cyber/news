@@ -1,3 +1,4 @@
+import requests  #
 import streamlit as st
 import pandas as pd
 from gnews import GNews
@@ -119,7 +120,33 @@ def collect_news_final(mapping, start_date, end_date):
     
 
 def to_excel(data_list):
-    df = pd.DataFrame(data_list)
+    valid_data = []
+    
+    # (1) 링크 유효성 체크 및 제목 정제
+    for item in data_list:
+        try:
+            # 링크가 살아있는지 2초 동안 확인 [cite: 12]
+            res = requests.head(item['링크'], timeout=2)
+            if res.status_code != 200: 
+                continue # 접속 안 되면 제외
+        except:
+            continue # 에러 나면 제외
+        
+        # 제목에서 ' - 언론사명' 제거 [cite: 12]
+        clean_title = item['제목']
+        if " - " in clean_title:
+            clean_title = clean_title.rsplit(" - ", 1)[0]
+            
+        valid_data.append({
+            "키워드": item['키워드'],
+            "출처": item['출처'],
+            "기사일자": item['기사일자'],
+            "제목": clean_title,
+            "링크": item['링크']
+        })
+
+    # (2) 엑셀 파일 생성 (기존 로직 기반) [cite: 11]
+    df = pd.DataFrame(valid_data)
     output = BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
         export_df = df[["키워드", "출처", "기사일자", "제목"]]
@@ -130,6 +157,7 @@ def to_excel(data_list):
         link_format = workbook.add_format({'font_color': 'blue', 'underline': 1})
         
         for row_num, link in enumerate(df['링크']):
+            # 정제된 제목에 하이퍼링크 입히기 [cite: 12]
             worksheet.write_url(row_num + 1, 3, link, link_format, df.iloc[row_num]['제목'])
             
         worksheet.set_column('A:C', 15)
