@@ -226,8 +226,10 @@ with st.sidebar:
                 kw_cols = st.columns(2)
                 for idx, s in enumerate(subs):
                     with kw_cols[idx % 2]:
-                        if st.button(f"{s} ×", key=f"del_kw_{g}_{s}", use_container_width=True):
-                            st.session_state.keyword_mapping[group_name].remove(s)
+                        # g와 s를 명확히 인자로 고정하여 에러 방지
+                        if st.button(f"{s} ×", key=f"del_kw_{g}_{s}_{idx}", use_container_width=True):
+                            # 정확한 그룹(g)에서 키워드(s)를 제거
+                            st.session_state.keyword_mapping[g].remove(s)
                             save_keywords(st.session_state.keyword_mapping)
                             st.rerun()
                 st.markdown("---")
