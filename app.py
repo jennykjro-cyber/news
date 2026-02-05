@@ -146,7 +146,7 @@ def collect_news_final(mapping, start_date, end_date):
             # 제목 간의 유사도 계산 (기준을 0.5에서 0.35~0.4로 낮추면 더 엄격하게 걸러짐)
             # 기준값이 낮을수록 "조금만 비슷해도 삭제"하게 됩니다.
             similarity = SequenceMatcher(None, current_title_clean, existing_title_clean).ratio()
-            if similarity >= 0.4:  # 목이 40% 이상 유사하거나, 완전히 같은 키워드 그룹 내에서 유사할 경우 중복 처리
+            if similarity >= 0.35:  # 목이 40% 이상 유사하거나, 완전히 같은 키워드 그룹 내에서 유사할 경우 중복 처리
                 is_duplicate = True
                 break
                 
